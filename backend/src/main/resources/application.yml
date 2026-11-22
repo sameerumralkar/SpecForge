@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: spec-builder
+  datasource:
+    # Local file database under backend/data, so projects survive restarts.
+    url: jdbc:h2:file:./data/specbuilder
+    username: sa
+    password: ""
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  h2:
+    console:
+      enabled: true
+  flyway:
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+specbuilder:
+  # Add the "Order Service" sample on first start.
+  seed-sample: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://localhost:5432/specbuilder
+    username: specbuilder
+    password: specbuilder
+  h2:
+    console:
+      enabled: false

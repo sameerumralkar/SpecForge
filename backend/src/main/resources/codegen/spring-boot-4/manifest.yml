@@ -1,0 +1,58 @@
+# The Spring Boot 4 target. Each entry renders one template, once or once per item of a model
+# collection (dtos, groups, routes, entities, clients). "when" is a FreeMarker condition over
+# `model`, `features`, `project` and `item`. Adding a target means adding a folder like this one.
+id: spring-boot-4
+name: Spring Boot 4 + Apache Camel 4
+properties:
+  bootVersion: 4.1.3
+  camelVersion: 4.23.0
+  mapstructVersion: 1.6.3
+  resilience4jVersion: 2.4.0
+  javaVersion: "21"
+# Simple names that templates import next to the DTO package; a payload with one of these names
+# would clash, so generation refuses it.
+reservedNames: [Valid, DecimalMax, DecimalMin, Email, Max, Min, NotNull, Pattern, Size, BigDecimal, LocalDate,
+  OffsetDateTime, List, UUID, Map, HashMap, ArrayList, Set, Supplier, Duration, SocketTimeoutException, ResponseEntity,
+  RestController, GetMapping, PostMapping, PutMapping, PatchMapping, DeleteMapping, RequestMapping, RequestMethod,
+  PathVariable, RequestParam, RequestHeader, RequestBody, DateTimeFormat, Exchange, ProducerTemplate, Service,
+  Component, Validator, Logger, LoggerFactory, JsonMapper, Retry, RetryConfig, IntervalFunction, KafkaListener,
+  JmsListener, RabbitListener, RouteBuilder, AggregationStrategies, Transactional, DataAccessException, Mapper,
+  Mapping, Named, ReportingPolicy, Environment, RestClient, HttpMethod, SimpleClientHttpRequestFactory,
+  ResourceAccessException, HttpServerErrorException]
+files:
+  - { template: pom.xml.ftl, output: pom.xml }
+  - { template: static/mvnw, output: mvnw, copy: true, executable: true }
+  - { template: static/mvnw.cmd, output: mvnw.cmd, copy: true }
+  - { template: static/maven-wrapper.properties, output: .mvn/wrapper/maven-wrapper.properties, copy: true }
+  - { template: static/gitignore, output: .gitignore, copy: true }
+  - { template: README.md.ftl, output: README.md }
+  - { template: application.yml.ftl, output: src/main/resources/application.yml }
+  - { template: java/Application.java.ftl, output: "src/main/java/${project.packagePath}/${project.appClass}.java" }
+  - { template: java/dto/Dto.java.ftl, each: dtos, output: "src/main/java/${project.packagePath}/dto/${item.className}.java" }
+  - { template: java/web/Controller.java.ftl, each: groups, when: item.hasController(), output: "src/main/java/${project.packagePath}/web/${item.controllerClass}.java" }
+  - { template: java/service/Service.java.ftl, each: groups, when: item.hasService(), output: "src/main/java/${project.packagePath}/service/${item.serviceClass}.java" }
+  - { template: java/service/ServiceImpl.java.ftl, each: groups, when: item.hasService(), primary: true, output: "src/main/java/${project.packagePath}/service/${item.serviceImplClass}.java" }
+  - { template: java/messaging/Listener.java.ftl, each: groups, when: item.hasListener(), output: "src/main/java/${project.packagePath}/messaging/${item.listenerClass}.java" }
+  - { template: java/messaging/MessagingGateway.java.ftl, when: features.messaging, output: "src/main/java/${project.packagePath}/messaging/MessagingGateway.java" }
+  - { template: java/camel/Gateway.java.ftl, each: groups, when: item.hasGateway(), output: "src/main/java/${project.packagePath}/route/${item.gatewayClass}.java" }
+  - { template: java/camel/Route.java.ftl, each: routes, primary: true, output: "src/main/java/${project.packagePath}/route/${item.className}.java" }
+  - { template: java/persistence/Entity.java.ftl, each: entities, output: "src/main/java/${project.packagePath}/persistence/${item.className}.java" }
+  - { template: java/persistence/Repository.java.ftl, each: entities, output: "src/main/java/${project.packagePath}/persistence/${item.repositoryClass}.java" }
+  - { template: java/persistence/Store.java.ftl, each: entities, output: "src/main/java/${project.packagePath}/persistence/${item.storeClass}.java" }
+  - { template: java/client/Client.java.ftl, each: clients, output: "src/main/java/${project.packagePath}/client/${item.className}.java" }
+  - { template: java/mapper/DtoMapper.java.ftl, when: features.mapstruct, output: "src/main/java/${project.packagePath}/mapper/DtoMapper.java" }
+  - { template: java/support/Expressions.java.ftl, output: "src/main/java/${project.packagePath}/support/Expressions.java" }
+  - { template: java/support/CamelResponses.java.ftl, when: features.camel, output: "src/main/java/${project.packagePath}/support/CamelResponses.java" }
+  - template: java/error/Exception.java.ftl
+    items:
+      - { name: RuleViolationException, doc: "A rule rejected the request; carries the HTTP status to answer with." }
+      - { name: NotFoundException, doc: "A record that a rule looks up does not exist." }
+      - { name: DownstreamUnavailableException, doc: "A service that an enrich rule calls failed or could not be reached." }
+      - { name: DownstreamTimeoutException, doc: "A service that an enrich rule calls did not answer in time." }
+      - { name: PersistenceFailedException, doc: "Saving or loading data failed." }
+      - { name: MessagingFailedException, doc: "Publishing a message failed." }
+    output: "src/main/java/${project.packagePath}/error/${item.name}.java"
+  - { template: java/error/ApiExceptionHandler.java.ftl, output: "src/main/java/${project.packagePath}/error/ApiExceptionHandler.java" }
+  - { template: java/test/ExpressionsTest.java.ftl, output: "src/test/java/${project.packagePath}/support/ExpressionsTest.java" }
+  - { template: java/test/ServiceImplTest.java.ftl, each: groups, when: item.hasService(), output: "src/test/java/${project.packagePath}/service/${item.testClass}.java" }
+  - { template: java/test/ApplicationTests.java.ftl, output: "src/test/java/${project.packagePath}/${project.appClass}Tests.java" }
