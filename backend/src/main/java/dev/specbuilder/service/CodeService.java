@@ -7,6 +7,8 @@ import dev.specbuilder.generator.Problem;
 import dev.specbuilder.generator.ProjectSnapshot;
 import dev.specbuilder.generator.SnapshotService;
 import dev.specbuilder.generator.code.CodeGenerator;
+import dev.specbuilder.generation.GenerationService;
+import dev.specbuilder.generation.GenerationSnapshot;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 
 /** Generates the Maven project of a project, for preview and as a zip. */
@@ -29,11 +33,20 @@ public class CodeService {
     private final SnapshotService snapshots;
     private final RuleService rules;
     private final CodeGenerator generator;
+    private final GenerationService generations;
 
-    public CodeService(SnapshotService snapshots, RuleService rules, CodeGenerator generator) {
+    public CodeService(SnapshotService snapshots, RuleService rules, CodeGenerator generator, GenerationService generations) {
         this.snapshots = snapshots;
         this.rules = rules;
         this.generator = generator;
+        this.generations = generations;
+    }
+
+    /** The generated files by path, whatever problems there are. */
+    public Map<String, String> currentFiles(UUID projectId) {
+        Map<String, String> files = new TreeMap<>();
+        generator.render(snapshots.load(projectId)).result().files().forEach(f -> files.put(f.path(), f.content()));
+        return files;
     }
 
     public CodeView preview(UUID projectId) {
@@ -57,6 +70,9 @@ public class CodeService {
         if (!errors.isEmpty()) {
             throw new CodeNotReadyException(errors);
         }
+        Map<String, String> downloaded = new TreeMap<>();
+        output.result().files().forEach(f -> downloaded.put(f.path(), f.content()));
+        generations.record(projectId, GenerationSnapshot.Kind.CODE, GenerationSnapshot.Reason.DOWNLOAD, downloaded);
         String folder = slug(project.name()) + "/";
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (ZipArchiveOutputStream zip = new ZipArchiveOutputStream(bytes)) {

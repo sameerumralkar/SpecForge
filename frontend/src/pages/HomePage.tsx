@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { keys, useProjects } from '../api/hooks'
 import { ProjectDialog } from '../components/ProjectDialog'
+import { ImportDialog } from '../components/ImportDialog'
 import { ErrorSummary } from '../components/ErrorSummary'
 
 export function HomePage() {
@@ -12,6 +13,7 @@ export function HomePage() {
   const navigate = useNavigate()
   const client = useQueryClient()
   const [creating, setCreating] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   if (projects.isPending) return <CircularProgress sx={{ m: 4 }} />
   if (projects.error) {
@@ -39,7 +41,9 @@ export function HomePage() {
       <Stack direction="row" spacing={2} sx={{ justifyContent: 'center' }}>
         <Button variant="contained" onClick={addSample}>Add the sample</Button>
         <Button variant="outlined" onClick={() => setCreating(true)}>Empty project</Button>
+        <Button variant="outlined" onClick={() => setImporting(true)}>Import from files</Button>
       </Stack>
+      <ImportDialog open={importing} onClose={() => setImporting(false)} onImported={(id) => navigate(`/projects/${id}`)} />
       <ProjectDialog open={creating} onClose={() => setCreating(false)} onCreated={(p) => navigate(`/projects/${p.id}`)} />
     </Box>
   )

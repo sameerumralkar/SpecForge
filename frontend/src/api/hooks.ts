@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
+import type { SnapshotKind } from './types'
 
 export const keys = {
   meta: ['meta'] as const,
@@ -11,6 +12,8 @@ export const keys = {
   specs: (projectId: string) => ['projects', projectId, 'specs'] as const,
   code: (projectId: string) => ['projects', projectId, 'code'] as const,
   diagrams: (projectId: string) => ['projects', projectId, 'diagrams'] as const,
+  snapshots: (projectId: string, kind: string) => ['projects', projectId, 'snapshots', kind] as const,
+  diff: (projectId: string, snapshotId: string) => ['projects', projectId, 'diff', snapshotId] as const,
 }
 
 export const useMeta = () => useQuery({ queryKey: keys.meta, queryFn: api.meta, staleTime: Infinity })
@@ -34,6 +37,14 @@ export const useCode = (projectId: string, enabled: boolean) =>
 /** The project's diagrams in Mermaid and PlantUML; only fetched while something shows them. */
 export const useDiagrams = (projectId: string, enabled: boolean) =>
   useQuery({ queryKey: keys.diagrams(projectId), queryFn: () => api.diagrams(projectId), enabled, placeholderData: (previous) => previous })
+
+/** Saved generations of one kind, newest first. */
+export const useSnapshots = (projectId: string, kind: SnapshotKind) =>
+  useQuery({ queryKey: keys.snapshots(projectId, kind), queryFn: () => api.snapshots(projectId, kind) })
+
+/** The current output compared with a snapshot; refreshed with the project like everything else. */
+export const useDiff = (projectId: string, snapshotId: string | null) =>
+  useQuery({ queryKey: keys.diff(projectId, snapshotId ?? ''), queryFn: () => api.diff(projectId, snapshotId!), enabled: !!snapshotId })
 
 /**
  * Anything can change many things at once (a payload rename shows in endpoints and rule summaries),

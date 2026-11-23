@@ -6,6 +6,8 @@ import dev.specbuilder.generator.*;
 import dev.specbuilder.generator.spec.AsyncApiGenerator;
 import dev.specbuilder.generator.spec.OpenApiGenerator;
 import dev.specbuilder.generator.spec.SpecValidator;
+import dev.specbuilder.generation.GenerationService;
+import dev.specbuilder.generation.GenerationSnapshot;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -31,12 +33,24 @@ public class SpecService {
     private final OpenApiGenerator openApi;
     private final AsyncApiGenerator asyncApi;
     private final SpecValidator validator;
+    private final GenerationService generations;
 
-    public SpecService(SnapshotService snapshots, OpenApiGenerator openApi, AsyncApiGenerator asyncApi, SpecValidator validator) {
+    public SpecService(SnapshotService snapshots, OpenApiGenerator openApi, AsyncApiGenerator asyncApi, SpecValidator validator,
+                       GenerationService generations) {
         this.snapshots = snapshots;
         this.openApi = openApi;
         this.asyncApi = asyncApi;
         this.validator = validator;
+        this.generations = generations;
+    }
+
+    /** openapi.yaml/json and asyncapi.yaml/json by path, for those the project has. */
+    public java.util.Map<String, String> currentFiles(UUID projectId) {
+        ProjectSnapshot project = snapshots.load(projectId);
+        java.util.Map<String, String> files = new java.util.TreeMap<>();
+        openApi.generate(project).files().forEach(f -> files.put(f.path(), f.content()));
+        asyncApi.generate(project).files().forEach(f -> files.put(f.path(), f.content()));
+        return files;
     }
 
     public SpecsView specs(UUID projectId) {
@@ -56,6 +70,9 @@ public class SpecService {
         List<GeneratedFile> files = new ArrayList<>(openApi(project).files());
         files.addAll(asyncApi(project).files());
         files.sort(Comparator.comparing(GeneratedFile::path));
+        java.util.Map<String, String> downloaded = new java.util.TreeMap<>();
+        files.forEach(f -> downloaded.put(f.path(), f.content()));
+        generations.record(projectId, GenerationSnapshot.Kind.SPECS, GenerationSnapshot.Reason.DOWNLOAD, downloaded);
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (ZipOutputStream zip = new ZipOutputStream(bytes)) {
             for (GeneratedFile f : files) {

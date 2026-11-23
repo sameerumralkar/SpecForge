@@ -11,4 +11,13 @@ vi.mock('../components/CodeEditor', async () => {
   }
 })
 
+// The Monaco diff editor likewise: show both versions as text.
+vi.mock('../components/CodeDiff', async () => {
+  const { createElement } = await import('react')
+  return {
+    default: ({ before, after }: { before: string; after: string }) =>
+      createElement('div', { 'aria-label': 'Diff' }, createElement('pre', null, before), createElement('pre', null, after)),
+  }
+})
+
 afterEach(() => cleanup())

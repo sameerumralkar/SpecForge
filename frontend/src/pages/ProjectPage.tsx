@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Alert, Box, Button, Card, CardContent, CircularProgress, Stack, Typography } from '@mui/material'
 import { useQueryClient } from '@tanstack/react-query'
-import { api } from '../api/client'
+import { api, downloads } from '../api/client'
+import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import { keys, useProject } from '../api/hooks'
 import type { Project, ProjectRequest } from '../api/types'
 import { EditorHeader } from '../components/EditorHeader'
@@ -82,9 +83,13 @@ function ProjectSettings({ project }: { project: Project }) {
             </CardContent>
           </Card>
         </Stack>
-        <Box sx={{ mt: 4 }}>
+        <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
+          <Button variant="outlined" startIcon={<FileDownloadIcon />} component="a" href={downloads.exportProject(project.id)} download>
+            Export project (JSON)
+          </Button>
+          <Box sx={{ flex: 1 }} />
           <Button color="error" variant="outlined" onClick={() => setConfirmDelete(true)}>Delete project…</Button>
-        </Box>
+        </Stack>
       </Box>
       <ConfirmDialog open={confirmDelete} title={`Delete ${project.name}?`} onConfirm={remove} onClose={() => setConfirmDelete(false)}>
         All its endpoints, payloads and rules are deleted. This cannot be undone.

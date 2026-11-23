@@ -12,6 +12,7 @@ import { buildDiagramsZip } from '../lib/diagramExport'
 import { saveBlob } from '../lib/diagrams'
 import { keys, useCode, useProjects } from '../api/hooks'
 import { ProjectDialog } from './ProjectDialog'
+import { ImportDialog } from './ImportDialog'
 
 export function AppShell() {
   const { projectId } = useParams()
@@ -19,6 +20,7 @@ export function AppShell() {
   const projects = useProjects()
   const client = useQueryClient()
   const [creating, setCreating] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [menu, setMenu] = useState<HTMLElement | null>(null)
   const [generateMenu, setGenerateMenu] = useState<HTMLElement | null>(null)
   const code = useCode(projectId ?? '', !!projectId && !!generateMenu)
@@ -92,10 +94,16 @@ export function AppShell() {
                 Generate
               </Button>
               <Menu anchorEl={generateMenu} open={!!generateMenu} onClose={() => setGenerateMenu(null)}>
-                <MenuItem component="a" href={downloads.specsZip(projectId)} download onClick={() => setGenerateMenu(null)}>
+                <MenuItem component="a" href={downloads.specsZip(projectId)} download onClick={() => {
+                  setGenerateMenu(null)
+                  setTimeout(() => client.invalidateQueries({ queryKey: keys.snapshots(projectId, 'SPECS') }), 1500)
+                }}>
                   <ListItemText primary="Spec" secondary="OpenAPI + AsyncAPI, YAML and JSON (.zip)" />
                 </MenuItem>
-                <MenuItem component="a" href={code.data?.ready ? downloads.codeZip(projectId) : undefined} download disabled={!code.data?.ready} onClick={() => setGenerateMenu(null)}>
+                <MenuItem component="a" href={code.data?.ready ? downloads.codeZip(projectId) : undefined} download disabled={!code.data?.ready} onClick={() => {
+                  setGenerateMenu(null)
+                  setTimeout(() => client.invalidateQueries({ queryKey: keys.snapshots(projectId, 'CODE') }), 1500)
+                }}>
                   <ListItemText primary="Code" secondary={!code.data ? 'Checking…' : code.data.ready
                     ? 'Maven project: Spring Boot + Camel (.zip)'
                     : `Fix ${codeErrors} problem${codeErrors === 1 ? '' : 's'} first (see Preview → Code)`} />
@@ -113,6 +121,7 @@ export function AppShell() {
           <Menu anchorEl={menu} open={!!menu} onClose={() => setMenu(null)}>
             <MenuItem onClick={() => { setMenu(null); setCreating(true) }}>Empty project…</MenuItem>
             <MenuItem onClick={addSample}>Copy of the Order Service sample</MenuItem>
+            <MenuItem onClick={() => { setMenu(null); setImporting(true) }}>Import from files…</MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>
@@ -125,6 +134,7 @@ export function AppShell() {
       <Snackbar open={!!exportError} autoHideDuration={8000} onClose={() => setExportError(null)}>
         <Alert severity="error" onClose={() => setExportError(null)}>{exportError}</Alert>
       </Snackbar>
+      <ImportDialog open={importing} onClose={() => setImporting(false)} onImported={(id) => navigate(`/projects/${id}`)} />
       <ProjectDialog open={creating} onClose={() => setCreating(false)} onCreated={(p) => navigate(`/projects/${p.id}`)} />
     </Box>
   )

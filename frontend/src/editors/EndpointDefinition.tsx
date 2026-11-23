@@ -1,5 +1,5 @@
-import { Autocomplete, Card, CardContent, Chip, MenuItem, Stack, TextField } from '@mui/material'
-import type { AsyncOperation, EndpointRequest, HttpMethod, MessagingProtocol, SecurityScheme } from '../api/types'
+import { Autocomplete, Card, CardContent, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material'
+import type { AsyncOperation, EndpointKind, EndpointRequest, HttpMethod, MessagingProtocol, SecurityScheme } from '../api/types'
 import { errorText } from '../lib/errors'
 import { syncPathParams } from '../lib/paths'
 import { mono } from '../theme'
@@ -17,6 +17,19 @@ export function EndpointDefinition({ value, onChange, allTags, error }: {
 }) {
   const err = (f: string) => errorText(error, f)
   const set = <K extends keyof EndpointRequest>(key: K, v: EndpointRequest[K]) => onChange({ ...value, [key]: v })
+
+  /** Carries over what fits the other kind (the body becomes the message and back) and fills in defaults. */
+  const switchKind = (kind: EndpointKind) => {
+    if (kind === value.kind) return
+    const headers = value.parameters.filter((p) => p.location === 'HEADER')
+    onChange(kind === 'ASYNC'
+      ? { ...value, kind, parameters: headers, operation: value.operation ?? 'RECEIVE', protocol: value.protocol ?? 'KAFKA',
+          channel: value.channel ?? value.name.replace(/([a-z0-9])([A-Z])/g, '$1.$2').toLowerCase(),
+          messagePayloadId: value.messagePayloadId ?? value.requestPayloadId ?? null }
+      : { ...value, kind, parameters: headers, httpMethod: value.httpMethod ?? 'POST', path: value.path ?? '/',
+          requestPayloadId: value.requestPayloadId ?? value.messagePayloadId ?? null,
+          responses: value.responses.length ? value.responses : [{ statusCode: '200', description: 'OK', payloadId: null }] })
+  }
   // Sync parameters when the user leaves the field, not per keystroke: half-typed paths would drop parameters and lose their settings.
   const syncParams = () => onChange({ ...value, parameters: syncPathParams(value.path, value.parameters) })
 
@@ -40,6 +53,15 @@ export function EndpointDefinition({ value, onChange, allTags, error }: {
 
       <Card variant="outlined">
         <CardContent>
+          <Stack direction="row" spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
+            <TextField select label="Kind" value={value.kind} sx={{ maxWidth: 220 }} onChange={(e) => switchKind(e.target.value as EndpointKind)}>
+              <MenuItem value="REST">REST (OpenAPI)</MenuItem>
+              <MenuItem value="ASYNC">Async (AsyncAPI)</MenuItem>
+            </TextField>
+            <Typography variant="body2" color="text.secondary">
+              Switching keeps the name, text, tags, rules and payload; settings of the other kind are set when you save.
+            </Typography>
+          </Stack>
           {value.kind === 'REST' ? (
             <Stack spacing={2}>
               <Stack direction="row" spacing={2}>

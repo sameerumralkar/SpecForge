@@ -1,6 +1,6 @@
 import type {
   Endpoint, EndpointRequest, Meta, Payload, PayloadRequest, PayloadUsage, Project, ProjectRequest,
-  CodeView, DiagramsView, Rule, RuleChain, RuleRequest, SpecsView,
+  CodeView, DiagramsView, GenerationDiff, ImportResult, Rule, RuleChain, RuleRequest, Snapshot, SnapshotKind, SpecsView,
 } from './types'
 
 export interface FieldError {
@@ -91,6 +91,15 @@ export const api = {
   specs: (projectId: string) => request<SpecsView>('GET', `${p(projectId)}/specs`),
   code: (projectId: string) => request<CodeView>('GET', `${p(projectId)}/code`),
   diagrams: (projectId: string) => request<DiagramsView>('GET', `${p(projectId)}/diagrams`),
+
+  importProject: (file: unknown, name?: string) =>
+    request<ImportResult>('POST', `/api/projects/import${name ? `?name=${encodeURIComponent(name)}` : ''}`, file),
+  importSpec: (documents: string[], name?: string, basePackage?: string) =>
+    request<ImportResult>('POST', '/api/projects/import/spec', { documents, name: name || null, basePackage: basePackage || null }),
+
+  snapshots: (projectId: string, kind: SnapshotKind) => request<Snapshot[]>('GET', `${p(projectId)}/generations?kind=${kind}`),
+  takeSnapshot: (projectId: string, kind: SnapshotKind) => request<Snapshot>('POST', `${p(projectId)}/generations`, { kind }),
+  diff: (projectId: string, snapshotId: string) => request<GenerationDiff>('GET', `${p(projectId)}/generations/${snapshotId}/diff`),
 }
 
 /** Download links (the browser saves the file; no fetch needed). */
@@ -99,6 +108,7 @@ export const downloads = {
   specsZip: (projectId: string) => `${p(projectId)}/generate/specs.zip`,
   codeZip: (projectId: string) => `${p(projectId)}/generate/code.zip`,
   diagramsZip: (projectId: string) => `${p(projectId)}/generate/diagrams.zip`,
+  exportProject: (projectId: string) => `${p(projectId)}/export`,
   /** A diagram as a file: .mmd/.puml source, or PlantUML-rendered .svg/.png. */
   diagram: (projectId: string, id: string, format: string, inline = false) =>
     `${p(projectId)}/diagrams/${id}.${format}${inline ? '?download=false' : ''}`,

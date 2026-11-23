@@ -3,9 +3,13 @@
 Design APIs, attach processing rules, and generate OpenAPI/AsyncAPI specs, runnable Spring Boot / Camel
 code and architecture diagrams.
 
-**Status: Phase 5 of 6.** The editor and the generation of specs (OpenAPI 3.1 / AsyncAPI 3.0, validated), Java
-code (implementation classes and Camel routes) and diagrams (Mermaid and PlantUML) are done. Import/export and
-the diff view come in Phase 6.
+**Status: all six phases are done.** The app covers:
+
+- the editor;
+- generation of specs (OpenAPI 3.1 / AsyncAPI 3.0, validated), Java code (implementation classes and Camel
+  routes) and diagrams (Mermaid and PlantUML);
+- import from OpenAPI/AsyncAPI files and project JSON, and export to project JSON;
+- comparing generated output with earlier snapshots.
 
 ## Run it
 
@@ -19,8 +23,8 @@ cd frontend && npm install && npm run dev  # UI on http://localhost:5173 (calls 
 Tests:
 
 ```bash
-cd backend && ./mvnw test     # 126 tests; see the notes below
-cd frontend && npm test       # 39 component and unit tests (Vitest + Testing Library)
+cd backend && ./mvnw test     # 134 tests; see the notes below
+cd frontend && npm test       # 45 component and unit tests (Vitest + Testing Library)
 ```
 
 - The PostgreSQL test needs Docker, and is skipped without it.
@@ -81,8 +85,9 @@ can also refer to an endpoint parameter, e.g. `orderId` on `GET /orders/{orderId
 - **Sidebar:** the project (click for settings), endpoints grouped by their first tag (REST) or by channel
   (async), and payloads. Each item's ⋮ menu has Duplicate and Delete.
 - **Endpoint editor:** four tabs.
-  - **Definition:** name, summary, description, tags, method + path or channel. Path parameters follow
-    `{name}`s in the path when you leave the field.
+  - **Definition:** name, summary, description, tags, kind (REST or async, switchable; the body becomes the
+    message and back), method + path or channel. Path parameters follow `{name}`s in the path when you
+    leave the field.
   - **Request / Response:** parameters, request body, responses, or the message payload and headers.
   - **Processing rules:** drag-and-drop list (or ↑/↓), a form for each rule type, a plain-English summary
     and warnings.
@@ -204,6 +209,53 @@ API: `GET /api/projects/{id}/diagrams` (all, both notations),
 `GET …/diagrams/{diagramId}.{mmd|puml|svg|png}` (`?download=false` serves it inline),
 `GET …/generate/diagrams.zip`.
 
+## Import and export
+
+**New project → Import from files…** creates a project from either:
+
+- **A project export** (`<name>.specbuilder.json`, from **Export project (JSON)** in project settings). It is
+  the whole project as readable JSON: settings, payloads, endpoints and rules. Payloads are referred to by
+  name everywhere, including in rule configs (`"targetPayload": "Order"`), so the file has no database ids.
+- **OpenAPI 3.0/3.1 and AsyncAPI 2.x/3.0 files** (YAML or JSON). Several files, e.g. an OpenAPI and an
+  AsyncAPI file, become one project. Payloads with the same name and fields in both are merged.
+  - Schemas become payloads, keeping types, formats, required, length and value limits, patterns, allowed
+    values, descriptions and examples. Inline objects become payloads named after where they appear.
+  - Operations become REST endpoints (parameters, bodies, responses, tags, security) or async endpoints
+    (channel, send/receive, protocol from the servers, message payload and headers).
+  - Anything the model can't hold exactly is skipped or simplified and listed as a warning:
+    - cookie parameters and status ranges such as `4XX`;
+    - maps;
+    - `oneOf`/`anyOf`, imported as the first option;
+    - list or primitive bodies, which are wrapped in a payload;
+    - names that aren't valid Java names, which are renamed.
+  - Recursive schemas turn on "allow circular references".
+
+Imports go through the normal validation in one transaction: an invalid file creates nothing, and each
+error names the part of the file it's about (e.g. `payloads[2].fields[0].refPayload`). A taken project
+name gets the next number (`Order Service 2` → `Order Service 3`).
+
+Tests check both round trips:
+
+- exporting a project and importing it gives the same export;
+- importing the sample's own generated OpenAPI + AsyncAPI files gives back the same payloads and endpoints.
+
+API: `GET /api/projects/{id}/export`, `POST /api/projects/import[?name=…]`,
+`POST /api/projects/import/spec` (`{documents: [...], name?, basePackage?}`).
+
+## Comparing generations
+
+Each download of the code or spec zip saves a **snapshot** of the generated files, and **Save snapshot**
+does the same on demand. Identical consecutive snapshots are skipped, and the last 10 per kind are kept.
+
+In **Preview → Code** and the **OpenAPI/AsyncAPI** tabs, **Compare with…** picks a snapshot:
+
+- the summary counts what changed (`3 changed, 1 added, 0 removed`);
+- the file tree marks files **A**/**M**/**D** and can show changed files only;
+- changed files open in Monaco's side-by-side diff.
+
+API: `GET /api/projects/{id}/generations?kind=CODE|SPECS`, `POST …/generations` (`{kind}`),
+`GET …/generations/{snapshotId}/diff`.
+
 ## Expression syntax
 
 Rule conditions, branch conditions, mapping expressions and CUSTOM checks share one syntax. Code
@@ -274,6 +326,8 @@ backend/src/main/java/dev/specbuilder/
   api/           REST controllers, error handling, request/response records
   seed/          the Order Service sample
   expression/    the shared expression syntax: parser and type checker
+  importexport/  the project JSON format, its import/export, and the OpenAPI/AsyncAPI importer
+  generation/    snapshots of generated output and diffs against them
   generator/     ProjectSnapshot (read-only input), the Generator interface; generator/spec/ holds
                  the OpenAPI and AsyncAPI generators, the YAML/JSON writer and the validators;
                  generator/code/ builds the code model, translates expressions and renders templates;

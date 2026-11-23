@@ -218,3 +218,32 @@ export interface DiagramsView {
   diagrams: Diagram[]
   problems: Problem[]
 }
+
+export interface ImportResult {
+  project: Project
+  warnings: string[]
+}
+
+export type SnapshotKind = 'CODE' | 'SPECS'
+
+export interface Snapshot {
+  id: string
+  kind: SnapshotKind
+  reason: 'DOWNLOAD' | 'MANUAL'
+  createdAt: string
+  fileCount: number
+}
+
+export type ChangeStatus = 'ADDED' | 'REMOVED' | 'CHANGED' | 'UNCHANGED'
+
+export interface FileChange {
+  path: string
+  status: ChangeStatus
+  before?: string | null
+  after?: string | null
+}
+
+export interface GenerationDiff {
+  baseline: Snapshot
+  files: FileChange[]
+}

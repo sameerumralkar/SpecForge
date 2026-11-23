@@ -14,11 +14,14 @@ import type { EndpointKind, Problem, SpecView } from '../api/types'
 import { ErrorSummary } from './ErrorSummary'
 import { focusPattern, type Format, type PreviewTab, type SpecId } from '../lib/specs'
 import { CodePanel } from './CodePanel'
+import { CompareBar } from './CompareBar'
+import { useDiff } from '../api/hooks'
 import { DiagramPanel } from './DiagramPanel'
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
 import CodeIcon from '@mui/icons-material/Code'
 
 const CodeEditor = lazy(() => import('./CodeEditor'))
+const CodeDiff = lazy(() => import('./CodeDiff'))
 
 
 function StatusIcon({ spec }: { spec?: SpecView }) {
@@ -49,6 +52,10 @@ export function SpecPanel({ projectId, focus, onClose }: {
   }
   const isSpec = tab === 'openapi' || tab === 'asyncapi'
   const spec = isSpec ? specs.data?.[tab] : undefined
+  const [compareId, setCompareId] = useState('')
+  const diff = useDiff(projectId, compareId || null)
+  const change = compareId && isSpec ? diff.data?.files.find((f) => f.path === `${tab}.${format}`) : undefined
+  const compareSummary = change ? (change.status === 'UNCHANGED' ? 'No changes in this file' : `This file is ${change.status.toLowerCase()}`) : undefined
   const text = (format === 'yaml' ? spec?.yaml : spec?.json) ?? ''
   const focusMatches = isSpec && focus && (focus.kind === 'ASYNC') === (tab === 'asyncapi')
   const problems = spec?.problems ?? []
@@ -97,12 +104,15 @@ export function SpecPanel({ projectId, focus, onClose }: {
           <Alert severity="info">{spec.problems[0]?.message ?? 'Nothing to generate yet.'}</Alert>
         </Box>
       )}
+      {isSpec && <CompareBar projectId={projectId} kind="SPECS" value={compareId} onChange={setCompareId} summary={compareSummary} />}
       {spec?.present && (
         <>
           <Box sx={{ flex: 1, minHeight: 0 }}>
             <Suspense fallback={<CircularProgress sx={{ m: 3 }} />}>
-              <CodeEditor value={text} language={format} readOnly height="100%"
-                focus={focusMatches ? focusPattern(tab as SpecId, format, focus!.name) : undefined} />
+              {change && change.status !== 'UNCHANGED' ? (
+                <CodeDiff before={change.before ?? ''} after={change.after ?? ''} language={format} />
+              ) : <CodeEditor value={text} language={format} readOnly height="100%"
+                focus={focusMatches ? focusPattern(tab as SpecId, format, focus!.name) : undefined} />}
             </Suspense>
           </Box>
           <ProblemList spec={tab as SpecId} problems={problems} errors={errors} />
