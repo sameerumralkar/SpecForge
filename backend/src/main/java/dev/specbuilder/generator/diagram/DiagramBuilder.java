@@ -85,6 +85,86 @@ final class DiagramBuilder {
         return names;
     }
 
+    /**
+     * The classes one endpoint touches: its methods on the controller, service, listener and
+     * gateway (other endpoints' methods left out), its route, what its rules use (stores with their
+     * repositories and entities, clients, the mapper, the messaging gateway), and its payloads.
+     */
+    ClassDiagram endpointClassDiagram(EndpointSnapshot e) {
+        String name = e.name();
+        Set<String> names = new TreeSet<>();
+        Set<String> methods = new HashSet<>(Set.of(name));
+        CodeModel.Endpoint endpoint = null;
+        for (CodeModel.Group g : code.groups()) {
+            if (has(g.restEndpoints(), name)) { names.add(g.controllerClass()); endpoint = find(g.restEndpoints(), name); }
+            if (has(g.implEndpoints(), name)) {
+                names.add(g.serviceClass());
+                names.add(g.serviceImplClass());
+                endpoint = find(g.implEndpoints(), name);
+            }
+            if (has(g.listenerEndpoints(), name)) { names.add(g.listenerClass()); endpoint = endpoint == null ? find(g.listenerEndpoints(), name) : endpoint; }
+            if (has(g.gatewayEndpoints(), name)) { names.add(g.gatewayClass()); endpoint = endpoint == null ? find(g.gatewayEndpoints(), name) : endpoint; }
+        }
+        List<CodeModel.Step> steps = new ArrayList<>();
+        code.routes().stream().filter(r -> r.endpointName().equals(name)).forEach(r -> {
+            names.add(r.className());
+            steps.addAll(r.steps());
+        });
+        if (endpoint != null && endpoint.impl() != null) {
+            steps.addAll(endpoint.impl().steps());
+            endpoint.impl().steps().forEach(s -> methods.add(s.methodName()));
+        }
+        Set<String> mapperMethods = new HashSet<>();
+        Set<String> clients = new HashSet<>();
+        List<String> roots = new ArrayList<>();
+        roots.add(e.isRest() ? e.requestPayload() : e.messagePayload());
+        e.responses().forEach(x -> roots.add(x.payload()));
+        for (CodeModel.Step step : steps) {
+            switch (step.data()) {
+                case CodeModel.PersistData d -> code.entities().stream().filter(x -> x.storeField().equals(d.storeField())).forEach(x -> {
+                    names.addAll(List.of(x.storeClass(), x.repositoryClass(), x.className()));
+                    if (x.hasSource()) roots.add(x.sourceType());
+                });
+                case CodeModel.EnrichData d -> code.clients().stream().filter(c -> c.fieldName().equals(d.clientField())).forEach(c -> {
+                    names.add(c.className());
+                    clients.add(c.className());
+                    methods.add(d.clientMethod());
+                });
+                case CodeModel.TransformData d -> {
+                    names.add("DtoMapper");
+                    mapperMethods.add(d.mapperMethod());
+                    code.mapperMethods().stream().filter(m -> m.name().equals(d.mapperMethod())).forEach(m -> roots.add(m.targetType()));
+                }
+                case CodeModel.PublishData d -> names.add("MessagingGateway");
+                case null, default -> { }
+            }
+        }
+        roots.removeIf(Objects::isNull);
+        names.addAll(project.reachableFrom(roots));
+
+        // Only this endpoint's methods on the classes it shares with other endpoints.
+        Set<String> shared = new HashSet<>(clients);
+        code.groups().forEach(g -> shared.addAll(Arrays.asList(g.controllerClass(), g.serviceClass(), g.serviceImplClass(),
+                g.listenerClass(), g.gatewayClass())));
+        ClassDiagram d = classDiagram(names);
+        List<DiagramModel.Package> packages = d.packages().stream().map(p -> new DiagramModel.Package(p.name(), p.classes().stream().map(c -> {
+            if (shared.contains(c.name())) return new ClassBox(c.name(), c.stereotype(), c.isInterface(),
+                    c.members().stream().filter(m -> methods.contains(m.name())).toList());
+            if (c.name().equals("DtoMapper") && !mapperMethods.isEmpty()) return new ClassBox(c.name(), c.stereotype(), c.isInterface(),
+                    c.members().stream().filter(m -> mapperMethods.contains(m.name())).toList());
+            return c;
+        }).toList())).toList();
+        return new ClassDiagram(packages, d.relations());
+    }
+
+    private static boolean has(List<CodeModel.Endpoint> list, String name) {
+        return list.stream().anyMatch(x -> x.name().equals(name));
+    }
+
+    private static CodeModel.Endpoint find(List<CodeModel.Endpoint> list, String name) {
+        return list.stream().filter(x -> x.name().equals(name)).findFirst().orElse(null);
+    }
+
     ClassDiagram classDiagram() {
         Set<String> boxes = new HashSet<>();
         List<DiagramModel.Package> packages = new ArrayList<>();

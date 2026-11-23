@@ -5,6 +5,7 @@ import { ProjectLayout } from './pages/ProjectLayout'
 import { ProjectPage } from './pages/ProjectPage'
 import { EndpointPage } from './pages/EndpointPage'
 import { PayloadPage } from './pages/PayloadPage'
+import { OutputPage } from './pages/OutputPage'
 
 export const routes = [
   {
@@ -19,6 +20,9 @@ export const routes = [
           { index: true, element: <ProjectPage /> },
           { path: 'endpoints/:endpointId/:tab?', element: <EndpointPage /> },
           { path: 'payloads/:payloadId', element: <PayloadPage /> },
+          { path: 'spec', element: <OutputPage view="spec" /> },
+          { path: 'code', element: <OutputPage view="code" /> },
+          { path: 'diagrams', element: <OutputPage view="diagrams" /> },
         ],
       },
     ],

@@ -14,9 +14,14 @@ public final class PlantUmlWriter {
     }
 
     public static String classes(ClassDiagram d, String title) {
+        return classes(d, title, true);
+    }
+
+    public static String classes(ClassDiagram d, String title, boolean leftToRight) {
         StringBuilder sb = header(title, true);
         // Left to right keeps Smetana from laying packages out in one very wide row.
-        sb.append("left to right direction\nhide empty members\nskinparam classAttributeIconSize 0\n");
+        if (leftToRight) sb.append("left to right direction\n");
+        sb.append("hide empty members\nskinparam classAttributeIconSize 0\n");
         for (DiagramModel.Package p : d.packages()) {
             if (p.classes().isEmpty()) continue;
             sb.append("package ").append(p.name()).append(" {\n");

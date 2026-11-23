@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -20,6 +21,12 @@ const view: DiagramsView = {
     { id: 'classes', kind: 'CLASS', title: 'Class diagram: everything', mermaid: 'classDiagram\n  class Order', plantuml: '@startuml\nclass Order\n@enduml' },
     { id: 'sequence-createOrder', kind: 'SEQUENCE', title: 'createOrder (POST /orders)', endpointName: 'createOrder',
       mermaid: 'sequenceDiagram\n  Client->>Svc: POST', plantuml: '@startuml\nClient -> Svc : POST\n@enduml' },
+    { id: 'classes-endpoint-createOrder', kind: 'CLASS', title: 'Class diagram: createOrder', endpointName: 'createOrder',
+      mermaid: 'classDiagram\n  class OrdersController', plantuml: '@startuml\nclass OrdersController\n@enduml' },
+    { id: 'sequence-getOrder', kind: 'SEQUENCE', title: 'getOrder (GET /orders/{id})', endpointName: 'getOrder',
+      mermaid: 'sequenceDiagram\n  Client->>Svc: GET', plantuml: '@startuml\nClient -> Svc : GET\n@enduml' },
+    { id: 'classes-endpoint-getOrder', kind: 'CLASS', title: 'Class diagram: getOrder', endpointName: 'getOrder',
+      mermaid: 'classDiagram\n  class OrderEntityStore', plantuml: '@startuml\nclass OrderEntityStore\n@enduml' },
   ],
 }
 
@@ -37,6 +44,43 @@ describe('DiagramPanel', () => {
     setup('createOrder')
     expect(await screen.findByLabelText('Mermaid diagram')).toHaveTextContent('sequenceDiagram Client->>Svc: POST')
     expect(screen.getByRole('combobox', { name: 'Diagram' })).toHaveTextContent('createOrder (POST /orders)')
+  })
+
+  it("offers the endpoint's sequence and class diagrams, and keeps the choice when another endpoint opens", async () => {
+    const user = userEvent.setup()
+    function Harness() {
+      const [endpoint, setEndpoint] = useState('createOrder')
+      return <><button onClick={() => setEndpoint('getOrder')}>Open getOrder</button><DiagramPanel projectId="p" focusEndpoint={endpoint} /></>
+    }
+    renderWithProviders(<Harness />, [[['projects', 'p', 'diagrams'], view]])
+    await user.click(await screen.findByRole('button', { name: 'Classes' }))
+    expect(await screen.findByLabelText('Mermaid diagram')).toHaveTextContent('class OrdersController')
+
+    await user.click(screen.getByRole('combobox', { name: 'Diagram' }))
+    const groups = screen.getAllByRole('listbox')[0].querySelectorAll('li.MuiListSubheader-root')
+    expect([...groups].map((g) => g.textContent)).toEqual(['This endpoint: createOrder', 'Project', 'Sequence diagrams', 'Endpoint class diagrams'])
+    await user.keyboard('{Escape}')
+
+    await user.click(screen.getByRole('button', { name: 'Open getOrder' }))
+    expect(await screen.findByLabelText('Mermaid diagram')).toHaveTextContent('class OrderEntityStore')
+    expect(screen.getByRole('button', { name: 'Classes' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Sequence' }))
+    expect(screen.getByLabelText('Mermaid diagram')).toHaveTextContent('Client->>Svc: GET')
+
+    // Picking another endpoint's diagram from the list shows that one.
+    await user.click(screen.getByRole('combobox', { name: 'Diagram' }))
+    await user.click(within(screen.getAllByRole('listbox')[0]).getByRole('option', { name: 'Class diagram: createOrder' }))
+    expect(screen.getByLabelText('Mermaid diagram')).toHaveTextContent('class OrdersController')
+    expect(screen.getByRole('button', { name: 'Classes' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it("on an endpoint's page, offers only that endpoint's diagrams", async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<DiagramPanel projectId="p" focusEndpoint="getOrder" endpointOnly />, [[['projects', 'p', 'diagrams'], view]])
+    expect(await screen.findByLabelText('Mermaid diagram')).toHaveTextContent('Client->>Svc: GET')
+    expect(screen.queryByRole('combobox', { name: 'Diagram' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Classes' }))
+    expect(screen.getByLabelText('Mermaid diagram')).toHaveTextContent('class OrderEntityStore')
   })
 
   it('switches to PlantUML, rendered by the server, and remembers the choice', async () => {

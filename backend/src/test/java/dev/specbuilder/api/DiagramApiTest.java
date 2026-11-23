@@ -28,13 +28,15 @@ class DiagramApiTest extends ApiTestSupport {
     }
 
     @Test
-    void listsAClassDiagramAnOverviewAndOneSequencePerEndpoint() {
+    void listsAClassDiagramAnOverviewAndASequenceAndClassDiagramPerEndpoint() {
         String p = sample();
         Response r = get("/api/projects/" + p + "/diagrams").expect(200);
         assertThat(r.json().get("problems").size()).as(r.json().get("problems").toString()).isZero();
         assertThat(texts(r.json().get("diagrams"), "id")).containsExactly("overview", "classes", "classes-model",
-                "classes-events", "classes-orders", "classes-payments", "sequence-createOrder",
-                "sequence-getOrder", "sequence-handlePaymentCompleted", "sequence-listOrders", "sequence-orderCreated");
+                "classes-events", "classes-orders", "classes-payments",
+                "sequence-createOrder", "classes-endpoint-createOrder", "sequence-getOrder", "classes-endpoint-getOrder",
+                "sequence-handlePaymentCompleted", "classes-endpoint-handlePaymentCompleted",
+                "sequence-listOrders", "classes-endpoint-listOrders", "sequence-orderCreated", "classes-endpoint-orderCreated");
         assertThat(diagram(r.json(), "classes-model").get("title").asString()).isEqualTo("Class diagram: data model");
 
         JsonNode classes = diagram(r.json(), "classes");
@@ -51,6 +53,19 @@ class DiagramApiTest extends ApiTestSupport {
                 .contains("alt status == 'SUCCEEDED'")
                 .contains("break if a step fails with any error after 3 attempts")
                 .contains("-)q4: original message (dead letter)");
+
+        JsonNode createOrder = diagram(r.json(), "classes-endpoint-createOrder");
+        assertThat(createOrder.get("endpointName").asString()).isEqualTo("createOrder");
+        assertThat(createOrder.get("title").asString()).isEqualTo("Class diagram: createOrder");
+        assertThat(createOrder.get("mermaid").asString())
+                .contains("+createOrder(CreateOrderRequest) Order", "-enrichCustomer() Order", "+createOrderEnrichCustomer() Customer",
+                        "+createOrderMapToOrder(CreateOrderRequest) Order", "OrdersServiceImpl ..> OrderEntityStore",
+                        "OrdersServiceImpl ..> CustomerServiceClient", "OrdersServiceImpl ..> MessagingGateway", "class CreateOrderRequest")
+                .as("other endpoints' methods and classes are left out")
+                .doesNotContain("getOrder", "listOrders", "HandlePaymentCompletedRoute", "PaymentCompletedEvent");
+        assertThat(diagram(r.json(), "classes-endpoint-handlePaymentCompleted").get("plantuml").asString())
+                .contains("class HandlePaymentCompletedRoute", "HandlePaymentCompletedRoute ..> OrderEntityStore", "class PaymentCompletedEvent")
+                .doesNotContain("OrdersController", "CreateOrderRequest");
 
         JsonNode overview = diagram(r.json(), "overview");
         assertThat(overview.get("plantuml").asString()).contains("component \"Order Service\" as svc")
@@ -86,7 +101,7 @@ class DiagramApiTest extends ApiTestSupport {
         try (ZipInputStream in = new ZipInputStream(new ByteArrayInputStream(zip))) {
             for (ZipEntry e = in.getNextEntry(); e != null; e = in.getNextEntry()) names.add(e.getName());
         }
-        assertThat(names).hasSize(11 * 4).contains("diagrams/classes.mmd", "diagrams/classes.puml", "diagrams/classes.plantuml.svg",
+        assertThat(names).hasSize(16 * 4).contains("diagrams/classes.mmd", "diagrams/classes.puml", "diagrams/classes.plantuml.svg",
                 "diagrams/sequence-orderCreated.plantuml.png");
     }
 

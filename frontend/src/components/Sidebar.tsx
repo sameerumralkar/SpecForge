@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import {
-  Box, Divider, IconButton, List, ListItemButton, ListItemText, ListSubheader, Menu, MenuItem, Tooltip, Typography,
+  Box, Divider, IconButton, List, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Menu, MenuItem, Tooltip, Typography,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import SettingsIcon from '@mui/icons-material/Settings'
+import DescriptionIcon from '@mui/icons-material/Description'
+import CodeIcon from '@mui/icons-material/Code'
+import AccountTreeIcon from '@mui/icons-material/AccountTree'
 import { ApiError, api } from '../api/client'
 import { useEndpoints, usePayloads, useProject, useRefreshProject } from '../api/hooks'
 import type { Endpoint, Payload, PayloadUsage } from '../api/types'
@@ -17,6 +20,13 @@ import { NewEndpointDialog } from './NewEndpointDialog'
 import { NewPayloadDialog } from './NewPayloadDialog'
 
 type Target = { kind: 'endpoint'; item: Endpoint } | { kind: 'payload'; item: Payload }
+
+const MENU = [
+  { label: 'Overview & settings', path: '', icon: <SettingsIcon fontSize="small" /> },
+  { label: 'API spec', path: 'spec', icon: <DescriptionIcon fontSize="small" /> },
+  { label: 'Generated code', path: 'code', icon: <CodeIcon fontSize="small" /> },
+  { label: 'Diagrams', path: 'diagrams', icon: <AccountTreeIcon fontSize="small" /> },
+]
 
 
 export function Sidebar({ projectId }: { projectId: string }) {
@@ -68,14 +78,21 @@ export function Sidebar({ projectId }: { projectId: string }) {
 
   return (
     <Box component="nav" sx={{ width: 290, flexShrink: 0, borderRight: 1, borderColor: 'divider', bgcolor: 'background.paper', overflow: 'auto' }}>
-      <ListItemButton selected={pathname === base} onClick={() => navigate(base)}>
-        <ListItemText
-          primary={project.data?.name ?? '…'}
-          secondary={project.data ? `${project.data.basePackage} · v${project.data.version}` : undefined}
-          slotProps={{ primary: { sx: { fontWeight: 600 } } }}
-        />
-        <SettingsIcon fontSize="small" color="action" />
-      </ListItemButton>
+      <Box sx={{ px: 2, pt: 1.5, pb: 0.5 }}>
+        <Typography sx={{ fontWeight: 600 }} noWrap>{project.data?.name ?? '…'}</Typography>
+        {project.data && <Typography variant="caption" color="text.secondary">{project.data.basePackage} · v{project.data.version}</Typography>}
+      </Box>
+      <List dense aria-label="Project menu">
+        {MENU.map((m) => {
+          const to = m.path ? `${base}/${m.path}` : base
+          return (
+            <ListItemButton key={m.label} selected={pathname === to} onClick={() => navigate(to)} sx={{ py: 0.75 }}>
+              <ListItemIcon sx={{ minWidth: 34 }}>{m.icon}</ListItemIcon>
+              <ListItemText primary={m.label} slotProps={{ primary: { sx: { fontWeight: 500 } } }} />
+            </ListItemButton>
+          )
+        })}
+      </List>
       <Divider />
 
       <List dense subheader={

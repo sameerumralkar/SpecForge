@@ -33,11 +33,14 @@ function StatusIcon({ spec }: { spec?: SpecView }) {
 const SEVERITY_COLOR = { ERROR: 'error', WARNING: 'warning', INFO: 'default' } as const
 
 /** Live preview of the generated OpenAPI and AsyncAPI documents (with validation results) and of the generated code. */
-export function SpecPanel({ projectId, focus, onClose }: {
+export function SpecPanel({ projectId, focus, onClose, tabs = ['openapi', 'asyncapi', 'code', 'diagrams'] }: {
   projectId: string
   /** The endpoint being edited; the preview jumps to it. */
   focus?: { name: string; kind: EndpointKind }
-  onClose: () => void
+  /** Shows a close button when given. */
+  onClose?: () => void
+  /** The tabs to offer; all by default. */
+  tabs?: PreviewTab[]
 }) {
   const specs = useSpecs(projectId)
   const [chosen, setChosen] = useState<PreviewTab | null>(() => {
@@ -45,7 +48,7 @@ export function SpecPanel({ projectId, focus, onClose }: {
     return saved === 'code' || saved === 'diagrams' ? saved : null
   })
   const [format, setFormat] = useState<Format>(() => (localStorage.getItem('spec-format') as Format) ?? 'yaml')
-  const tab: PreviewTab = chosen ?? (focus?.kind === 'ASYNC' ? 'asyncapi' : 'openapi')
+  const tab: PreviewTab = chosen && tabs.includes(chosen) ? chosen : (focus?.kind === 'ASYNC' ? 'asyncapi' : 'openapi')
   const choose = (t: PreviewTab) => {
     setChosen(t)
     localStorage.setItem('preview-tab', t === 'code' || t === 'diagrams' ? t : 'spec')
@@ -71,11 +74,11 @@ export function SpecPanel({ projectId, focus, onClose }: {
       <GlobalStyles styles={{ '.spec-focus-line': { background: 'rgba(57, 73, 171, 0.12)' } }} />
       <Stack direction="row" sx={{ alignItems: 'center', borderBottom: 1, borderColor: 'divider', pl: 1 }}>
         <Tabs value={tab} onChange={(_, t: PreviewTab) => choose(t)} variant="scrollable" scrollButtons="auto"
-          sx={{ flex: 1, minHeight: 40, '& .MuiTab-root': { minHeight: 40, minWidth: 0, px: 1.5 } }}>
-          <Tab value="openapi" label="OpenAPI 3.1" icon={<StatusIcon spec={specs.data?.openapi} />} iconPosition="end" />
-          <Tab value="asyncapi" label="AsyncAPI 3.0" icon={<StatusIcon spec={specs.data?.asyncapi} />} iconPosition="end" />
-          <Tab value="code" label="Code" icon={<CodeIcon fontSize="small" />} iconPosition="end" />
-          <Tab value="diagrams" label="Diagrams" icon={<AccountTreeIcon fontSize="small" />} iconPosition="end" />
+          sx={{ flex: 1, minHeight: 40, '& .MuiTab-root': { minHeight: 40, minWidth: 0, px: 1.25 } }}>
+          {tabs.includes('openapi') && <Tab value="openapi" label="OpenAPI" title="OpenAPI 3.1" icon={<StatusIcon spec={specs.data?.openapi} />} iconPosition="end" />}
+          {tabs.includes('asyncapi') && <Tab value="asyncapi" label="AsyncAPI" title="AsyncAPI 3.0" icon={<StatusIcon spec={specs.data?.asyncapi} />} iconPosition="end" />}
+          {tabs.includes('code') && <Tab value="code" label="Code" icon={<CodeIcon fontSize="small" />} iconPosition="end" />}
+          {tabs.includes('diagrams') && <Tab value="diagrams" label="Diagrams" icon={<AccountTreeIcon fontSize="small" />} iconPosition="end" />}
         </Tabs>
         {isSpec && <>
         <ToggleButtonGroup exclusive size="small" value={format} onChange={(_, f) => f && setFormatAndRemember(f)} sx={{ mr: 1 }}>
@@ -91,7 +94,7 @@ export function SpecPanel({ projectId, focus, onClose }: {
           </span>
         </Tooltip>
         </>}
-        <IconButton aria-label="Close preview" onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
+        {onClose && <IconButton aria-label="Close preview" onClick={onClose}><CloseIcon fontSize="small" /></IconButton>}
       </Stack>
       {specs.isFetching ? <LinearProgress sx={{ height: 2 }} /> : <Box sx={{ height: 2 }} />}
 

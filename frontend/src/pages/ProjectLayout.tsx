@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet, useMatch, useParams } from 'react-router'
+import { Outlet, useLocation, useMatch, useParams } from 'react-router'
 import { Box } from '@mui/material'
 import { Sidebar } from '../components/Sidebar'
 import { SpecPanel } from '../components/SpecPanel'
@@ -12,6 +12,8 @@ export function ProjectLayout() {
   const preview = usePreview()
   const endpointMatch = useMatch('/projects/:projectId/endpoints/:endpointId/*')
   const endpoints = useEndpoints(projectId!)
+  const { pathname } = useLocation()
+  const onOutputPage = /^\/projects\/[^/]+\/(spec|code|diagrams)\/?$/.test(pathname)
   const focused = endpoints.data?.find((e) => e.id === endpointMatch?.params.endpointId)
   const [width, setWidth] = useState(() => Number(localStorage.getItem('preview-width')) || 520)
   const resize = (w: number) => {
@@ -24,7 +26,7 @@ export function ProjectLayout() {
       <Box component="main" sx={{ flex: 1, minWidth: 0, overflow: 'auto', containerType: 'inline-size' }}>
         <Outlet />
       </Box>
-      {preview.open && (
+      {preview.open && !onOutputPage && (
         <>
           <ResizeHandle onResize={resize} min={360} max={1000} />
           <Box component="aside" sx={{ width, flexShrink: 0 }}>

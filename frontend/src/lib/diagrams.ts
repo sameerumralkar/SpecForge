@@ -4,9 +4,37 @@ export type Notation = 'mermaid' | 'plantuml'
 
 /** The diagram to show first: the open endpoint's sequence diagram, else the overview. */
 export function defaultDiagram(diagrams: Diagram[], endpointName?: string): Diagram | undefined {
-  return diagrams.find((d) => endpointName && d.endpointName === endpointName)
+  return diagrams.find((d) => endpointName && d.endpointName === endpointName && d.kind === 'SEQUENCE')
+    ?? diagrams.find((d) => endpointName && d.endpointName === endpointName)
     ?? diagrams.find((d) => d.kind === 'OVERVIEW')
     ?? diagrams[0]
+}
+
+/**
+ * The diagram to show. {@code chosenFor} is the endpoint that was open when the diagram was
+ * chosen. A choice of that endpoint's own diagram carries over when another endpoint opens:
+ * having picked createOrder's class diagram, opening getOrder shows getOrder's. Any other
+ * choice stays as it is.
+ */
+export function shownDiagram(diagrams: Diagram[], chosenId: string | null, chosenFor: string | undefined, endpointName?: string): Diagram | undefined {
+  const chosen = diagrams.find((d) => d.id === chosenId)
+  if (chosen?.endpointName && chosen.endpointName === chosenFor && endpointName && chosenFor !== endpointName) {
+    return diagrams.find((d) => d.endpointName === endpointName && d.kind === chosen.kind) ?? defaultDiagram(diagrams, endpointName)
+  }
+  return chosen ?? defaultDiagram(diagrams, endpointName)
+}
+
+/** Diagram choices in groups: the open endpoint's, the project's, then each endpoint's. */
+export function diagramGroups(diagrams: Diagram[], endpointName?: string): { label: string | null; items: Diagram[] }[] {
+  const own = endpointName ? diagrams.filter((d) => d.endpointName === endpointName) : []
+  const project = diagrams.filter((d) => !d.endpointName)
+  const others = diagrams.filter((d) => d.endpointName && d.endpointName !== endpointName)
+  return [
+    { label: own.length ? `This endpoint: ${endpointName}` : null, items: own },
+    { label: own.length ? 'Project' : null, items: project },
+    { label: 'Sequence diagrams', items: others.filter((d) => d.kind === 'SEQUENCE') },
+    { label: 'Endpoint class diagrams', items: others.filter((d) => d.kind === 'CLASS') },
+  ].filter((g) => g.items.length > 0)
 }
 
 /** A short hash of a text, to make image URLs change when the diagram does. */

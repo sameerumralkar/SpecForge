@@ -24,7 +24,7 @@ Tests:
 
 ```bash
 cd backend && ./mvnw test     # 134 tests; see the notes below
-cd frontend && npm test       # 45 component and unit tests (Vitest + Testing Library)
+cd frontend && npm test       # 48 component and unit tests (Vitest + Testing Library)
 ```
 
 - The PostgreSQL test needs Docker, and is skipped without it.
@@ -82,9 +82,12 @@ can also refer to an endpoint parameter, e.g. `orderId` on `GET /orders/{orderId
 
 ## The editor
 
-- **Sidebar:** the project (click for settings), endpoints grouped by their first tag (REST) or by channel
+- **Sidebar:** the menu below, endpoints grouped by their first tag (REST) or by channel
   (async), and payloads. Each item's ⋮ menu has Duplicate and Delete.
-- **Endpoint editor:** four tabs.
+- **Left menu:** **Overview & settings**, **API spec** (OpenAPI/AsyncAPI with validation), **Generated code**
+  and **Diagrams** each open a full page; below them are the endpoints and payloads. The **Preview** button
+  in the top bar shows the same outputs beside the editor.
+- **Endpoint editor:** five tabs.
   - **Definition:** name, summary, description, tags, kind (REST or async, switchable; the body becomes the
     message and back), method + path or channel. Path parameters follow `{name}`s in the path when you
     leave the field.
@@ -92,6 +95,7 @@ can also refer to an endpoint parameter, e.g. `orderId` on `GET /orders/{orderId
   - **Processing rules:** drag-and-drop list (or ↑/↓), a form for each rule type, a plain-English summary
     and warnings.
   - **Implementation:** implementation class vs processing route, and how each rule will be generated.
+  - **Diagrams:** this endpoint's sequence diagram and class diagram.
 - **Payload editor:** fields table (type, list item type, referenced payload, required, plus a
   constraints panel), a JSON example in Monaco, and "used by" links. A blocked delete lists every use.
 - Server validation errors show next to the field they are about, and are also listed at the top. Unsaved
@@ -180,9 +184,11 @@ decide the shape of the code.
 
 ## Diagrams
 
-**Preview → Diagrams** draws every diagram in **Mermaid** (rendered in the browser with mermaid.js) or
+**Diagrams** (left menu, or Preview → Diagrams) draws every diagram in **Mermaid** (rendered in the browser with mermaid.js) or
 **PlantUML** (rendered on the server to SVG/PNG, using PlantUML's built-in Smetana layout, so no Graphviz is
-needed). It opens on the sequence diagram of the endpoint you're editing. Switch between the drawing and
+needed). It opens on the sequence diagram of the endpoint you're editing, and **Sequence / Classes** switches
+to that endpoint's class diagram. The choice follows you as you open other endpoints, and the diagram list
+puts the open endpoint's diagrams first. Switch between the drawing and
 its source, zoom or fit to width, and export as `.mmd`/`.puml`/`.svg`/`.png`. **Generate → Diagrams**
 downloads all of them in both notations: `<id>.mmd`, `<id>.puml`, `<id>.plantuml.svg/.png` (rendered by
 the server) and `<id>.mermaid.svg/.png`. The Mermaid images are drawn in your browser and added to the
@@ -195,6 +201,7 @@ zip, because Mermaid only runs in a browser. Any diagram Mermaid can't draw is l
 | Class diagram: everything | The generated classes by package (dto, web, service, route, messaging, persistence, client, mapper), with payload composition (`*--` with multiplicity), implements, and uses |
 | Class diagram: data model | Just the payloads and how they contain each other |
 | Class diagram: one per tag | One tag's classes: controller, service, listener, gateway, its endpoints' routes, what they use (stores with their entities, clients, mapper), and the payloads its endpoints take and return. Generated when there is more than one tag |
+| Class diagram: one per endpoint | Just what one endpoint touches: its methods on the controller, service, listener or gateway (other endpoints' methods left out), its route, what its rules use (stores with their repositories and entities, the clients and calls it makes, its mapper methods, the messaging gateway), and its payloads. Drawn top to bottom |
 | Sequence diagram (one per endpoint) | Client → controller → service or Camel route → each rule step → external service, database or broker → response |
 
 The sequence diagrams show conditions as `opt`, branches as `alt`, split items and retries as `loop`, and

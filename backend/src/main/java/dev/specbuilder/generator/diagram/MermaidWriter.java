@@ -11,7 +11,12 @@ public final class MermaidWriter {
     }
 
     public static String classes(ClassDiagram d) {
-        StringBuilder sb = new StringBuilder("classDiagram\n  direction LR\n");
+        return classes(d, true);
+    }
+
+    /** Small diagrams (one endpoint's) read better top to bottom; big ones left to right. */
+    public static String classes(ClassDiagram d, boolean leftToRight) {
+        StringBuilder sb = new StringBuilder("classDiagram\n  direction " + (leftToRight ? "LR" : "TB") + "\n");
         for (DiagramModel.Package p : d.packages()) {
             if (p.classes().isEmpty()) continue;
             sb.append("  namespace ").append(p.name()).append(" {\n");

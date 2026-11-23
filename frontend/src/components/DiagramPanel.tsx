@@ -9,16 +9,22 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut'
 import { downloads } from '../api/client'
 import { useDiagrams } from '../api/hooks'
 import type { Diagram } from '../api/types'
-import { defaultDiagram, hash, saveBlob, svgToPng, type Notation } from '../lib/diagrams'
+import { diagramGroups, hash, saveBlob, shownDiagram, svgToPng, type Notation } from '../lib/diagrams'
 import { ErrorSummary } from './ErrorSummary'
 
 const MermaidView = lazy(() => import('./MermaidView'))
 const CodeEditor = lazy(() => import('./CodeEditor'))
 
 /** Class, overview and sequence diagrams, drawn with Mermaid (in the browser) or PlantUML (on the server). */
-export function DiagramPanel({ projectId, focusEndpoint }: { projectId: string; focusEndpoint?: string }) {
+export function DiagramPanel({ projectId, focusEndpoint, endpointOnly = false }: {
+  projectId: string
+  focusEndpoint?: string
+  /** Offer only the focused endpoint's diagrams (on the endpoint's own page). */
+  endpointOnly?: boolean
+}) {
   const diagrams = useDiagrams(projectId, true)
-  const [chosen, setChosen] = useState<string | null>(null)
+  const [choice, setChoice] = useState<{ id: string; for?: string } | null>(null)
+  const setChosen = (id: string) => setChoice({ id, for: focusEndpoint })
   const [notation, setNotation] = useState<Notation>(() => (localStorage.getItem('diagram-notation') as Notation) ?? 'mermaid')
   const [view, setView] = useState<'diagram' | 'source'>('diagram')
   const [scale, setScale] = useState<number | null>(null) // null = fit to the panel width
@@ -26,9 +32,10 @@ export function DiagramPanel({ projectId, focusEndpoint }: { projectId: string; 
   const [exportMenu, setExportMenu] = useState<HTMLElement | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
 
-  const list = useMemo(() => diagrams.data?.diagrams ?? [], [diagrams.data])
-  const focused = defaultDiagram(list, focusEndpoint)
-  const diagram: Diagram | undefined = list.find((d) => d.id === chosen) ?? focused
+  const list = useMemo(() => (diagrams.data?.diagrams ?? []).filter((d) => !endpointOnly || d.endpointName === focusEndpoint),
+    [diagrams.data, endpointOnly, focusEndpoint])
+  const diagram: Diagram | undefined = shownDiagram(list, choice?.id ?? null, choice?.for, focusEndpoint)
+  const own = focusEndpoint ? list.filter((d) => d.endpointName === focusEndpoint) : []
   const source = diagram ? (notation === 'mermaid' ? diagram.mermaid : diagram.plantuml) : ''
 
   const chooseNotation = (n: Notation) => {
@@ -60,16 +67,26 @@ export function DiagramPanel({ projectId, focusEndpoint }: { projectId: string; 
   if (diagrams.error) return <Box sx={{ p: 2 }}><ErrorSummary error={diagrams.error} /></Box>
   if (!diagrams.data) return <CircularProgress sx={{ m: 3 }} />
 
-  const sequences = list.filter((d) => d.kind === 'SEQUENCE')
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <Stack direction="row" spacing={1} sx={{ px: 1.5, py: 1, alignItems: 'center', borderBottom: 1, borderColor: 'divider', flexWrap: 'wrap' }} useFlexGap>
-        <TextField select value={diagram?.id ?? ''} onChange={(e) => setChosen(e.target.value)} sx={{ minWidth: 220, flex: 1 }}
+        {!endpointOnly && <TextField select value={diagram?.id ?? ''} onChange={(e) => setChosen(e.target.value)} sx={{ minWidth: 220, flex: 1 }}
           slotProps={{ htmlInput: { 'aria-label': 'Diagram' } }}>
-          {list.filter((d) => d.kind !== 'SEQUENCE').map((d) => <MenuItem key={d.id} value={d.id}>{d.title}</MenuItem>)}
-          {sequences.length > 0 && <ListSubheader>Sequence diagrams</ListSubheader>}
-          {sequences.map((d) => <MenuItem key={d.id} value={d.id}>{d.title}</MenuItem>)}
-        </TextField>
+          {diagramGroups(list, focusEndpoint).flatMap((g) => [
+            ...(g.label ? [<ListSubheader key={`h-${g.label}`}>{g.label}</ListSubheader>] : []),
+            ...g.items.map((d) => <MenuItem key={d.id} value={d.id}>{d.title}</MenuItem>),
+          ])}
+        </TextField>}
+        {endpointOnly && <Box sx={{ flex: 1 }} />}
+        {own.length > 1 && (
+          <ToggleButtonGroup exclusive size="small" aria-label="This endpoint's diagrams"
+            value={diagram?.endpointName === focusEndpoint ? diagram?.kind : null}
+            onChange={(_, kind) => { const d = own.find((x) => x.kind === kind); if (d) setChosen(d.id) }}
+            sx={{ '& button': { textTransform: 'none', py: 0.25 } }}>
+            {own.some((d) => d.kind === 'SEQUENCE') && <ToggleButton value="SEQUENCE">Sequence</ToggleButton>}
+            {own.some((d) => d.kind === 'CLASS') && <ToggleButton value="CLASS">Classes</ToggleButton>}
+          </ToggleButtonGroup>
+        )}
         <ToggleButtonGroup exclusive size="small" value={notation} onChange={(_, n) => n && chooseNotation(n)} sx={{ '& button': { textTransform: 'none', py: 0.25 } }}>
           <ToggleButton value="mermaid">Mermaid</ToggleButton>
           <ToggleButton value="plantuml">PlantUML</ToggleButton>

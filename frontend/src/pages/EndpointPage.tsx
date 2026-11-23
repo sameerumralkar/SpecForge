@@ -18,8 +18,9 @@ import { ImplementationTab } from '../editors/ImplementationTab'
 import { useDraft } from '../lib/useDraft'
 import { UnsavedChangesGuard } from '../components/UnsavedChangesGuard'
 import { syncPathParams } from '../lib/paths'
+import { DiagramPanel } from '../components/DiagramPanel'
 
-const TABS = ['definition', 'io', 'rules', 'implementation'] as const
+const TABS = ['definition', 'io', 'rules', 'implementation', 'diagrams'] as const
 type TabId = (typeof TABS)[number]
 
 /** Which tab shows the field a server error is about, so that tab can be flagged. */
@@ -124,14 +125,23 @@ function EndpointEditor({ endpoint, endpoints, payloads, project }: {
           <Tab value="io" label={label('io', 'Request / Response')} />
           <Tab value="rules" label={`Processing rules (${endpoint.ruleCount})`} />
           <Tab value="implementation" label={label('implementation', 'Implementation')} />
+          <Tab value="diagrams" label="Diagrams" />
         </Tabs>
       </Box>
-      <Box sx={{ p: 3, maxWidth: tab === 'rules' ? undefined : 1100 }}>
+      <Box sx={{ p: 3, maxWidth: tab === 'rules' || tab === 'diagrams' ? undefined : 1100 }}>
         {tab !== 'rules' && <ErrorSummary error={error} />}
         {tab === 'definition' && <EndpointDefinition value={draft} onChange={setDraft} allTags={allTags} error={error} />}
         {tab === 'io' && <RequestResponse value={draft} onChange={setDraft} payloads={payloads} error={error} />}
         {tab === 'rules' && (
           <RulesEditor projectId={project.id} endpointId={endpoint.id} payloads={payloads} parameters={endpoint.parameters} endpointDirty={dirty} />
+        )}
+        {tab === 'diagrams' && (
+          <Box sx={{ height: 'calc(100vh - 230px)', minHeight: 480, display: 'flex', flexDirection: 'column', border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', bgcolor: 'background.paper' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ px: 1.5, pt: 1 }}>
+              How {endpoint.name} runs (sequence) and the generated classes it uses (classes). All diagrams are under Diagrams in the left menu.
+            </Typography>
+            <DiagramPanel projectId={project.id} focusEndpoint={endpoint.name} endpointOnly />
+          </Box>
         )}
         {tab === 'implementation' && (
           <ImplementationTab projectId={project.id} endpointId={endpoint.id} kind={draft.kind} protocol={draft.protocol} value={draft.implementationStyle}

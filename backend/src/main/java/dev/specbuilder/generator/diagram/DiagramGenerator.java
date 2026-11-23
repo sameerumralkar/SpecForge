@@ -11,7 +11,8 @@ import java.util.List;
 
 /**
  * The project's diagrams, each in Mermaid and PlantUML: the class diagram of the generated code,
- * an overview of the service and what it talks to, and one sequence diagram per endpoint.
+ * an overview of the service and what it talks to, and per endpoint a sequence diagram and a class
+ * diagram of the classes it touches.
  */
 @Component
 public class DiagramGenerator implements Generator {
@@ -55,6 +56,10 @@ public class DiagramGenerator implements Generator {
             DiagramModel.Sequence sequence = builder.sequence(e);
             diagrams.add(new Diagram("sequence-" + e.name(), Kind.SEQUENCE, title, e.name(),
                     MermaidWriter.sequence(sequence), PlantUmlWriter.sequence(sequence, title)));
+            DiagramModel.ClassDiagram classes = builder.endpointClassDiagram(e);
+            String classTitle = "Class diagram: " + e.name();
+            diagrams.add(new Diagram("classes-endpoint-" + e.name(), Kind.CLASS, classTitle, e.name(),
+                    MermaidWriter.classes(classes, false), PlantUmlWriter.classes(classes, project.name() + ": " + classTitle, false)));
         }
         return diagrams;
     }
