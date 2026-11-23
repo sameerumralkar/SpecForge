@@ -23,7 +23,7 @@ cd frontend && npm install && npm run dev  # UI on http://localhost:5173 (calls 
 Tests:
 
 ```bash
-cd backend && ./mvnw test     # 134 tests; see the notes below
+cd backend && ./mvnw test     # 135 tests; see the notes below
 cd frontend && npm test       # 48 component and unit tests (Vitest + Testing Library)
 ```
 
@@ -72,7 +72,7 @@ shows it, with nothing to rewrite.
 | `TRANSFORM` | `targetPayloadId`; `mappings[]` of `{target, source}` or `{target, expression}`. Other fields map by name. The target becomes the payload later steps work on |
 | `ENRICH` | `serviceName`, `httpMethod` (GET), `url`, `responsePayloadId`, `targetField`, `timeoutMs` (2000), `mode` (`ENRICH`/`POLL_ENRICH`) |
 | `CONDITIONAL_ROUTE` | `branches[]` of `{name, condition, description}`; `otherwise` |
-| `PERSIST` | `entityName`, `operation` (`SAVE UPDATE DELETE FIND_BY_ID`), `idField` |
+| `PERSIST` | `entityName`, `operation` (`SAVE UPDATE DELETE FIND_BY_ID`), `idField`, `targetField` (FIND_BY_ID only: put the loaded record into this object field and keep the current payload, e.g. load the QR being paid into `payment.qr` to check it in later steps; empty = the record replaces the payload) |
 | `PUBLISH_EVENT` | `protocol` (KAFKA), `destination`, `eventPayloadId` (default: the current payload), `keyField` |
 | `SPLIT_AGGREGATE` | `collectionField`, `parallel`, `aggregation` (`COLLECT_LIST SUM COUNT NONE`), `sumField` |
 | `ERROR_HANDLING` | `on[]` (`ANY VALIDATION DOWNSTREAM_UNAVAILABLE TIMEOUT PERSISTENCE MESSAGING`), `targetRule` (empty = whole chain), `retry {maxAttempts, backoffMs, multiplier}`, `fallback {type, httpStatus, message}`, `deadLetterDestination` |
@@ -216,6 +216,46 @@ API: `GET /api/projects/{id}/diagrams` (all, both notations),
 `GET …/diagrams/{diagramId}.{mmd|puml|svg|png}` (`?download=false` serves it inline),
 `GET …/generate/diagrams.zip`.
 
+## Examples
+
+`examples/sgqr-paynow-payments.specbuilder.json` is a Singapore QR (SGQR) payment service with PayNow. Import
+it with **New project → Import from files…**.
+
+- **Two QR types.** A `PREFILLED` QR carries the amount, so the payer only confirms. For an
+  `AMOUNT_ENTRY` QR, the payer types the amount.
+- **QR Codes:** `POST /qr-codes`:
+  - checks the sale: SGD only, EMV field limits, and an amount that is required for `PREFILLED` and must
+    be left empty for `AMOUNT_ENTRY`;
+  - sets the QR to expire `expiresInSeconds` after it is issued (`plusSeconds`);
+  - looks up the merchant, which must be active;
+  - has `qr-encoder` build the EMVCo payload with the PayNow template, and stores the QR.
+
+  `GET /qr-codes/{qrId}` returns a QR and its status.
+- **Payments:** `POST /payments` (with an `Idempotency-Key` header) runs these steps in `PaymentsServiceImpl`:
+  1. validates the request;
+  2. **QR validity:** loads the QR into the payment, then rejects with 422 if the QR has already been paid
+     or cancelled, has expired, isn't SGD, or the merchant isn't active (404 if there is no such QR);
+  3. **amount by QR type:** a `PREFILLED` QR's amount is used as is, and a different amount is rejected.
+     An `AMOUNT_ENTRY` QR needs the payer's amount;
+  4. **balance check** against `core-banking`: rejects if the account isn't active, isn't SGD, or has
+     insufficient funds. Retried, with 503 if it stays down;
+  5. **limit checks** against `limits-service`: the per-transaction PayNow limit, what's left of today's
+     limit, and the number of transfers per day;
+  6. **fraud screening** with `fraud-service`, rejecting declined payers;
+  7. **step-up authentication** for payments over S$3,000 or flagged for review;
+  8. **submission** of the FAST credit transfer through `paynow-gateway` (retried, 503 if it stays down);
+  9. stores the payment, publishes `sgqr.payments.initiated`, and returns a `PaymentReceipt`. The receipt
+     leaves out the balance, limit and risk data used for the checks.
+
+  `GET /payments/{paymentId}` returns the receipt.
+- **Settlement:** a Camel route takes FAST results from `fast.settlement.results`, branches on
+  settled/rejected, updates the payment, tells merchants on `sgqr.payments.completed`, and dead-letters
+  messages it can't process.
+
+The generated project compiles; `GeneratedProjectCompilesTest` builds it. The real EMVCo/CRC encoding, FAST
+messages and step-up flow live behind the `qr-encoder` and `paynow-gateway` services and TODO stubs. They
+are not generated.
+
 ## Import and export
 
 **New project → Import from files…** creates a project from either:
@@ -274,10 +314,10 @@ generation will translate it to Java (implementation class) or Camel Simple (pro
 | List items | `items[].quantity`, only inside `sum count min max any all` |
 | Values | `'text'` (single quotes), `12`, `3.5`, `true`, `false`, `null` |
 | Operators | `== != < <= > >=`, `+ - * / %`, `and or not`, `( )` |
-| Functions | `now() today() randomUUID() sum() count() min() max() any() all() size() isEmpty() lower() upper() trim() concat() coalesce() oneOf()` |
+| Functions | `now() today() randomUUID() sum() count() min() max() any() all() size() isEmpty() lower() upper() trim() concat() coalesce() oneOf() plusSeconds()` |
 
 Examples: `status == 'PAID' and total > 100`, `sum(items[].quantity * items[].unitPrice)`,
-`any(items[].quantity > 10)`, `oneOf(country, 'NL', 'BE')`.
+`any(items[].quantity > 10)`, `oneOf(country, 'NL', 'BE')`, `plusSeconds(now(), expiresInSeconds)`.
 
 Syntax errors (unknown function, `=` instead of `==`, a list path outside an aggregate, ...) block the save
 with the character position. A field that doesn't exist, or a type mismatch such as text compared with a

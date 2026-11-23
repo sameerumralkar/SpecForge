@@ -101,6 +101,10 @@ public final class Expressions {
         return LocalDate.now();
     }
 
+    public static OffsetDateTime plusSeconds(Object dateTime, Object seconds) {
+        return dateTime == null || seconds == null ? null : ((OffsetDateTime) dateTime).plusSeconds(number(seconds).longValue());
+    }
+
     public static UUID randomUUID() {
         return UUID.randomUUID();
     }

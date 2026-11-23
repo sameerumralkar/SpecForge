@@ -147,8 +147,9 @@ public record CodeModel(
     public record ConditionalData(List<Branch> branches, String otherwise, String otherwiseUri) {
     }
 
+    /** {@code assignment} (FIND_BY_ID into a field only) stores the {@code loaded} record into the current payload. */
     public record PersistData(String storeField, String operation, String idExpr, boolean sameType, String entityClass,
-                              String sourceType) {
+                              String sourceType, String assignment) {
     }
 
     public record PublishData(String protocol, String destination, String eventType, String convertMethod, String keyExpr,

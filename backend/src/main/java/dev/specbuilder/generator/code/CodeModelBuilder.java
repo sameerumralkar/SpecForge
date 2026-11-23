@@ -222,7 +222,7 @@ final class CodeModelBuilder {
         }
         for (EndpointSnapshot e : project.endpoints()) {
             for (RuleSnapshot r : e.rules()) {
-                if (r.config() instanceof PersistConfig p && p.operation() == PersistConfig.Operation.FIND_BY_ID) {
+                if (r.config() instanceof PersistConfig p && p.operation() == PersistConfig.Operation.FIND_BY_ID && !intoField(p)) {
                     EntityInfo info = entityInfos.get(p.entityName());
                     if (info.source == null) {
                         info.source = successPayload(e);
@@ -239,10 +239,14 @@ final class CodeModelBuilder {
     private String typeAfter(RuleSnapshot r, String current) {
         return switch (r.config()) {
             case TransformConfig t -> payloadName(t.targetPayloadId());
-            case PersistConfig p when p.operation() == PersistConfig.Operation.FIND_BY_ID ->
+            case PersistConfig p when p.operation() == PersistConfig.Operation.FIND_BY_ID && !intoField(p) ->
                     entityInfos.containsKey(p.entityName()) ? entityInfos.get(p.entityName()).source : null;
             default -> current;
         };
+    }
+
+    private static boolean intoField(PersistConfig p) {
+        return p.targetField() != null && !p.targetField().isBlank();
     }
 
     private final class EntityInfo {
@@ -780,33 +784,35 @@ final class CodeModelBuilder {
         String resultType = en.responsePayloadId() == null ? "String" : payloadName(en.responsePayloadId());
         client.methods.add(new ClientMethod(clientMethod, en.httpMethod().name(), Names.literal(uri.toString()), uriParams, hasBody, resultType));
 
-        String assignment;
-        if (en.targetField() == null || en.targetField().isBlank()) {
-            assignment = "// TODO: use the " + resultType + " returned by " + en.serviceName();
-        } else if (inType.equals("Object")) {
-            assignment = "// TODO: there is no payload to put the result into";
-        } else {
-            List<JavaExpressions.Segment> segs = JavaExpressions.segments(en.targetField());
-            FieldSnapshot targetField = resolve(payloads.get(inType), en.targetField());
-            String fieldType = targetField == null ? null : plainType(targetField);
-            if (segs.stream().anyMatch(JavaExpressions.Segment::intoItems)) {
-                error(ctx.where(r), "the result cannot be stored inside list items (" + en.targetField() + ")");
-                assignment = "// TODO";
-            } else if (fieldType != null && !fieldType.equals(resultType)) {
-                error(ctx.where(r), en.targetField() + " is a " + fieldType + " but the call returns a " + resultType);
-                assignment = "// TODO";
-            } else {
-                String setter = Names.setter(segs.getLast().name()) + "(result)";
-                if (segs.size() == 1) {
-                    assignment = "current." + setter + ";";
-                } else {
-                    String parent = JavaExpressions.chain("current", segs.subList(0, segs.size() - 1));
-                    assignment = "var $parent = " + parent + ";\nif ($parent != null) {\n    $parent." + setter + ";\n}";
-                }
-            }
-        }
+        String assignment = en.targetField() == null || en.targetField().isBlank()
+                ? "// TODO: use the " + resultType + " returned by " + en.serviceName()
+                : assignInto(ctx, r, inType, en.targetField(), resultType, "result");
         return new Step("ENRICH", r.name(), summary, method, signature, args, inType, inType, condition,
                 new EnrichData(client.fieldName(), clientMethod, String.join(", ", callArgs), resultType, assignment, en.mode().name(), sub));
+    }
+
+    /** Java that stores {@code variable} (of {@code valueType}) into {@code targetField} of the current payload. */
+    private String assignInto(EndpointContext ctx, RuleSnapshot r, String inType, String targetField, String valueType, String variable) {
+        if (inType.equals("Object")) {
+            return "// TODO: there is no payload to put the " + valueType + " into";
+        }
+        List<JavaExpressions.Segment> segs = JavaExpressions.segments(targetField);
+        FieldSnapshot field = resolve(payloads.get(inType), targetField);
+        String fieldType = field == null ? null : plainType(field);
+        if (segs.stream().anyMatch(JavaExpressions.Segment::intoItems)) {
+            error(ctx.where(r), "the " + valueType + " cannot be stored inside list items (" + targetField + ")");
+            return "// TODO";
+        }
+        if (fieldType != null && !fieldType.equals(valueType)) {
+            error(ctx.where(r), targetField + " is a " + fieldType + " but the step gives a " + valueType);
+            return "// TODO";
+        }
+        String setter = Names.setter(segs.getLast().name()) + "(" + variable + ")";
+        if (segs.size() == 1) {
+            return "current." + setter + ";";
+        }
+        String parent = JavaExpressions.chain("current", segs.subList(0, segs.size() - 1));
+        return "var $parent = " + parent + ";\nif ($parent != null) {\n    $parent." + setter + ";\n}";
     }
 
     private Step conditional(EndpointContext ctx, RuleSnapshot r, ConditionalRouteConfig c, String method, String signature,
@@ -832,6 +838,7 @@ final class CodeModelBuilder {
         String idExpr = p.idField() == null || p.idField().isBlank() ? null
                 : JavaExpressions.convert(java.read(p.idField(), scope), entity.id.javaType());
         String outType = inType;
+        String assignment = null;
         switch (p.operation()) {
             case SAVE -> {
                 if (!sameType) error(ctx.where(r), p.entityName() + " stores " + entity.source + ", not " + inType);
@@ -839,6 +846,8 @@ final class CodeModelBuilder {
             case FIND_BY_ID -> {
                 if (entity.source == null) {
                     error(ctx.where(r), "cannot tell what " + p.entityName() + " holds: add a SAVE rule for it or a success response payload");
+                } else if (intoField(p)) {
+                    assignment = assignInto(ctx, r, inType, p.targetField(), entity.source, "loaded");
                 } else {
                     outType = entity.source;
                 }
@@ -853,7 +862,7 @@ final class CodeModelBuilder {
         }
         return new Step("PERSIST", r.name(), summary, method, signature, args, inType, outType, condition,
                 new PersistData(Names.camel(p.entityName() + "Store"), p.operation().name(), idExpr == null ? "null" : idExpr,
-                        sameType, p.entityName(), entity.source));
+                        sameType, p.entityName(), entity.source, assignment));
     }
 
     private Step publish(EndpointContext ctx, RuleSnapshot r, PublishEventConfig p, String method, String signature,

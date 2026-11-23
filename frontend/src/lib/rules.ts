@@ -12,7 +12,7 @@ export function defaultConfig(type: RuleType): RuleConfig {
     case 'CONDITIONAL_ROUTE':
       return { branches: [{ name: '', condition: '', description: '' }], otherwise: '' }
     case 'PERSIST':
-      return { entityName: '', operation: 'SAVE', idField: '' }
+      return { entityName: '', operation: 'SAVE', idField: '', targetField: '' }
     case 'PUBLISH_EVENT':
       return { protocol: 'KAFKA', destination: '', eventPayloadId: null, keyField: '' }
     case 'SPLIT_AGGREGATE':

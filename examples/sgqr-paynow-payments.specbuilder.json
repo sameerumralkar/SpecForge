@@ -1,0 +1,2469 @@
+{
+  "format": "spec-builder/project",
+  "version": 1,
+  "project": {
+    "name": "SGQR PayNow Payments",
+    "basePackage": "com.example.sgqr",
+    "version": "1.0.0",
+    "description": "Singapore QR (SGQR) payments with PayNow: merchants issue dynamic QR codes for a sale, either pre-filled with the amount or for the payer to enter it; payer banking apps pay them through the PayNow gateway over FAST after QR validity, balance, limit and fraud checks; settlement results come back on Kafka and are announced to merchants.",
+    "defaultImplementationStyle": "IMPLEMENTATION_CLASS",
+    "allowCircularReferences": false
+  },
+  "payloads": [
+    {
+      "name": "Merchant",
+      "description": "A merchant registered for SGQR, as returned by merchant-directory.",
+      "example": "{\"merchantId\": \"KOPI0001\", \"name\": \"Ah Seng Kopi\", \"uen\": \"201912345K\", \"city\": \"Singapore\", \"mcc\": \"5814\", \"status\": \"ACTIVE\"}",
+      "fields": [
+        {
+          "name": "merchantId",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Acquirer-assigned merchant id",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": "^[A-Z0-9]{6,20}$",
+          "enumValues": []
+        },
+        {
+          "name": "name",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Merchant name shown in the payer app (EMV tag 59, max 25)",
+          "example": null,
+          "minLength": null,
+          "maxLength": 25,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "uen",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Unique Entity Number; the PayNow proxy the QR pays to",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": "^([0-9]{8}[A-Z]|[0-9]{9}[A-Z]|[TSR][0-9]{2}[A-Z]{2}[0-9]{4}[A-Z])$",
+          "enumValues": []
+        },
+        {
+          "name": "city",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Merchant city (EMV tag 60)",
+          "example": null,
+          "minLength": null,
+          "maxLength": 15,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "mcc",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Merchant category code (EMV tag 52)",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": "^[0-9]{4}$",
+          "enumValues": []
+        },
+        {
+          "name": "status",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "ACTIVE",
+            "SUSPENDED",
+            "CLOSED"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CreateQrCodeRequest",
+      "description": "What a merchant terminal sends to get a dynamic PayNow QR for one sale.",
+      "example": "{\"merchantId\": \"KOPI0001\", \"qrType\": \"PREFILLED\", \"amount\": 4.8, \"currency\": \"SGD\", \"billReference\": \"INV-20261124-0042\", \"expiresInSeconds\": 300}",
+      "fields": [
+        {
+          "name": "merchantId",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": "^[A-Z0-9]{6,20}$",
+          "enumValues": []
+        },
+        {
+          "name": "qrType",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "PREFILLED: the QR carries the amount, the payer only confirms. AMOUNT_ENTRY: the payer types the amount.",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "PREFILLED",
+            "AMOUNT_ENTRY"
+          ]
+        },
+        {
+          "name": "amount",
+          "type": "DECIMAL",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": "Required for PREFILLED; leave empty for AMOUNT_ENTRY",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": 0.01,
+          "maximum": 999999.99,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "currency",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "ISO 4217 currency; PayNow QR is SGD only",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "SGD"
+          ]
+        },
+        {
+          "name": "billReference",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Bill or order number shown to the payer (EMV tag 62-01, max 25)",
+          "example": null,
+          "minLength": null,
+          "maxLength": 25,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "expiresInSeconds",
+          "type": "INTEGER",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "How long the QR can be paid",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": 60,
+          "maximum": 86400,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "EmvPayload",
+      "description": "The SGQR string to render as a QR image, from qr-encoder.",
+      "example": null,
+      "fields": [
+        {
+          "name": "payload",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "EMVCo merchant-presented QR payload (TLV), PayNow template under tag 26",
+          "example": null,
+          "minLength": null,
+          "maxLength": 512,
+          "minimum": null,
+          "maximum": null,
+          "pattern": "^000201",
+          "enumValues": []
+        },
+        {
+          "name": "crc",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "CRC-16/CCITT checksum (EMV tag 63)",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": "^[0-9A-F]{4}$",
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "QrCode",
+      "description": "A dynamic QR code issued for one sale.",
+      "example": null,
+      "fields": [
+        {
+          "name": "qrId",
+          "type": "UUID",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "merchantId",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": "^[A-Z0-9]{6,20}$",
+          "enumValues": []
+        },
+        {
+          "name": "merchant",
+          "type": "OBJECT",
+          "itemType": null,
+          "refPayload": "Merchant",
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "qrType",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "PREFILLED",
+            "AMOUNT_ENTRY"
+          ]
+        },
+        {
+          "name": "amount",
+          "type": "DECIMAL",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": "Empty for AMOUNT_ENTRY QRs",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": 0.01,
+          "maximum": 999999.99,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "currency",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "ISO 4217 currency; PayNow QR is SGD only",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "SGD"
+          ]
+        },
+        {
+          "name": "billReference",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": 25,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "amountEditable",
+          "type": "BOOLEAN",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": "PayNow \"amount editable\" flag in the QR; true for AMOUNT_ENTRY",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "expiresInSeconds",
+          "type": "INTEGER",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "expiresAt",
+          "type": "DATE_TIME",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "After this the QR cannot be paid",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "status",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "ACTIVE",
+            "PAID",
+            "EXPIRED",
+            "CANCELLED"
+          ]
+        },
+        {
+          "name": "emv",
+          "type": "OBJECT",
+          "itemType": null,
+          "refPayload": "EmvPayload",
+          "required": false,
+          "format": null,
+          "description": "Filled in by the encode step",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "createdAt",
+          "type": "DATE_TIME",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "PaymentRequest",
+      "description": "What the payer's banking app sends after scanning a QR.",
+      "example": "{\"qrId\": \"7d1f4c2a-1b3e-4f5a-9c8d-2e6f0a1b3c4d\", \"amount\": 4.8, \"payerAccountId\": \"0123456789\", \"payerName\": \"Tan Wei Ming\"}",
+      "fields": [
+        {
+          "name": "qrId",
+          "type": "UUID",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "From the scanned QR (EMV tag 62-05 reference)",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "amount",
+          "type": "DECIMAL",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": "The amount the payer typed: required for AMOUNT_ENTRY QRs; leave empty (or equal to the QR amount) for PREFILLED",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": 0.01,
+          "maximum": 999999.99,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "payerAccountId",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Debit account at the payer bank",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": "^[0-9]{9,14}$",
+          "enumValues": []
+        },
+        {
+          "name": "payerName",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": 140,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "AccountBalance",
+      "description": "The payer's account as seen by core-banking.",
+      "example": null,
+      "fields": [
+        {
+          "name": "accountId",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "availableBalance",
+          "type": "DECIMAL",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Ledger balance minus holds",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "currency",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "status",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "ACTIVE",
+            "DORMANT",
+            "FROZEN",
+            "CLOSED"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TransferLimits",
+      "description": "The payer's PayNow limits and what has been used today, from limits-service.",
+      "example": null,
+      "fields": [
+        {
+          "name": "perTransactionLimit",
+          "type": "DECIMAL",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Maximum for one PayNow transfer",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "dailyLimit",
+          "type": "DECIMAL",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Maximum total PayNow transfers per day (customer-set)",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "usedToday",
+          "type": "DECIMAL",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Total already sent today",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "transfersToday",
+          "type": "INTEGER",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "maxTransfersPerDay",
+          "type": "INTEGER",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "RiskAssessment",
+      "description": "Fraud screening result from fraud-service.",
+      "example": null,
+      "fields": [
+        {
+          "name": "score",
+          "type": "INTEGER",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": 0,
+          "maximum": 100,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "decision",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "APPROVE",
+            "REVIEW",
+            "DECLINE"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FastSubmission",
+      "description": "Acknowledgement from the PayNow gateway that the FAST credit transfer was accepted.",
+      "example": null,
+      "fields": [
+        {
+          "name": "networkReference",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "FAST end-to-end reference",
+          "example": null,
+          "minLength": null,
+          "maxLength": 35,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "acceptedAt",
+          "type": "DATE_TIME",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "Payment",
+      "description": "A PayNow payment made against a QR code.",
+      "example": null,
+      "fields": [
+        {
+          "name": "paymentId",
+          "type": "UUID",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "qrId",
+          "type": "UUID",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "payerAccountId",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "payerName",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": 140,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "amount",
+          "type": "DECIMAL",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": "Taken from the QR for PREFILLED QRs",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": 0.01,
+          "maximum": 999999.99,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "currency",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "ISO 4217 currency; PayNow QR is SGD only",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "SGD"
+          ]
+        },
+        {
+          "name": "status",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "PENDING",
+            "SETTLED",
+            "REJECTED"
+          ]
+        },
+        {
+          "name": "qr",
+          "type": "OBJECT",
+          "itemType": null,
+          "refPayload": "QrCode",
+          "required": false,
+          "format": null,
+          "description": "The QR being paid, loaded for the checks",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "balance",
+          "type": "OBJECT",
+          "itemType": null,
+          "refPayload": "AccountBalance",
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "limits",
+          "type": "OBJECT",
+          "itemType": null,
+          "refPayload": "TransferLimits",
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "risk",
+          "type": "OBJECT",
+          "itemType": null,
+          "refPayload": "RiskAssessment",
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "fast",
+          "type": "OBJECT",
+          "itemType": null,
+          "refPayload": "FastSubmission",
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "createdAt",
+          "type": "DATE_TIME",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "settledAt",
+          "type": "DATE_TIME",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "reasonCode",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": "FAST reject reason, e.g. AC04 (account closed)",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "PaymentReceipt",
+      "description": "What the payer's app gets back: the payment without the balance, limit and risk details used to check it.",
+      "example": null,
+      "fields": [
+        {
+          "name": "paymentId",
+          "type": "UUID",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "qrId",
+          "type": "UUID",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "merchantName",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "billReference",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "amount",
+          "type": "DECIMAL",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "currency",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "status",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "PENDING",
+            "SETTLED",
+            "REJECTED"
+          ]
+        },
+        {
+          "name": "networkReference",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "createdAt",
+          "type": "DATE_TIME",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "SettlementResult",
+      "description": "Sent by the PayNow gateway when FAST settles or rejects a transfer.",
+      "example": null,
+      "fields": [
+        {
+          "name": "paymentId",
+          "type": "UUID",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "networkReference",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": 35,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "status",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "SETTLED",
+            "REJECTED"
+          ]
+        },
+        {
+          "name": "reasonCode",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "settledAt",
+          "type": "DATE_TIME",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "PaymentInitiatedEvent",
+      "description": "Published when a payment has been submitted to FAST.",
+      "example": null,
+      "fields": [
+        {
+          "name": "paymentId",
+          "type": "UUID",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "qrId",
+          "type": "UUID",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "amount",
+          "type": "DECIMAL",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "currency",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "createdAt",
+          "type": "DATE_TIME",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "PaymentCompletedEvent",
+      "description": "Published to merchants when a payment settles or is rejected.",
+      "example": null,
+      "fields": [
+        {
+          "name": "paymentId",
+          "type": "UUID",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "networkReference",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "status",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": [
+            "SETTLED",
+            "REJECTED"
+          ]
+        },
+        {
+          "name": "reasonCode",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "settledAt",
+          "type": "DATE_TIME",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "PaymentError",
+      "description": "Error body returned by every REST endpoint.",
+      "example": null,
+      "fields": [
+        {
+          "name": "code",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "message",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "details",
+          "type": "ARRAY",
+          "itemType": "STRING",
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "kind": "REST",
+      "name": "createQrCode",
+      "summary": "Issue a dynamic PayNow QR for a sale",
+      "description": "Checks the request and the merchant, builds the SGQR (EMVCo) payload with the PayNow template and stores the QR.",
+      "tags": [
+        "QR Codes"
+      ],
+      "implementationStyle": null,
+      "parameters": [],
+      "httpMethod": "POST",
+      "path": "/qr-codes",
+      "requestPayload": "CreateQrCodeRequest",
+      "responses": [
+        {
+          "statusCode": "201",
+          "description": "QR issued",
+          "payload": "QrCode"
+        },
+        {
+          "statusCode": "400",
+          "description": "Invalid request",
+          "payload": "PaymentError"
+        },
+        {
+          "statusCode": "422",
+          "description": "Merchant cannot accept payments",
+          "payload": "PaymentError"
+        },
+        {
+          "statusCode": "503",
+          "description": "A downstream service is unavailable",
+          "payload": "PaymentError"
+        }
+      ],
+      "security": [
+        "BEARER_JWT"
+      ],
+      "channel": null,
+      "operation": null,
+      "protocol": null,
+      "messagePayload": null,
+      "rules": [
+        {
+          "type": "VALIDATE",
+          "name": "Validate request",
+          "condition": null,
+          "config": {
+            "checks": [
+              {
+                "field": "merchantId",
+                "kind": "REQUIRED",
+                "value": null,
+                "message": null
+              },
+              {
+                "field": "qrType",
+                "kind": "REQUIRED",
+                "value": null,
+                "message": null
+              },
+              {
+                "field": "amount",
+                "kind": "CUSTOM",
+                "value": "qrType != 'PREFILLED' or not isEmpty(amount)",
+                "message": "A pre-filled QR needs an amount"
+              },
+              {
+                "field": "amount",
+                "kind": "CUSTOM",
+                "value": "qrType != 'AMOUNT_ENTRY' or isEmpty(amount)",
+                "message": "Leave the amount empty: the payer enters it"
+              },
+              {
+                "field": "amount",
+                "kind": "MIN",
+                "value": "0.01",
+                "message": null
+              },
+              {
+                "field": "amount",
+                "kind": "MAX",
+                "value": "999999.99",
+                "message": null
+              },
+              {
+                "field": "currency",
+                "kind": "CUSTOM",
+                "value": "currency == 'SGD'",
+                "message": "PayNow QR supports SGD only"
+              },
+              {
+                "field": "billReference",
+                "kind": "MAX_LENGTH",
+                "value": "25",
+                "message": null
+              },
+              {
+                "field": "expiresInSeconds",
+                "kind": "MIN",
+                "value": "60",
+                "message": null
+              },
+              {
+                "field": "expiresInSeconds",
+                "kind": "MAX",
+                "value": "86400",
+                "message": null
+              }
+            ],
+            "failureStatus": 400
+          }
+        },
+        {
+          "type": "TRANSFORM",
+          "name": "Create QR record",
+          "condition": null,
+          "config": {
+            "targetPayload": "QrCode",
+            "mappings": [
+              {
+                "target": "qrId",
+                "source": null,
+                "expression": "randomUUID()"
+              },
+              {
+                "target": "status",
+                "source": null,
+                "expression": "'ACTIVE'"
+              },
+              {
+                "target": "amountEditable",
+                "source": null,
+                "expression": "qrType == 'AMOUNT_ENTRY'"
+              },
+              {
+                "target": "createdAt",
+                "source": null,
+                "expression": "now()"
+              },
+              {
+                "target": "expiresAt",
+                "source": null,
+                "expression": "plusSeconds(now(), expiresInSeconds)"
+              }
+            ]
+          }
+        },
+        {
+          "type": "ENRICH",
+          "name": "Look up merchant",
+          "condition": null,
+          "config": {
+            "serviceName": "merchant-directory",
+            "httpMethod": "GET",
+            "url": "/merchants/{merchantId}",
+            "responsePayload": "Merchant",
+            "targetField": "merchant",
+            "timeoutMs": 1500,
+            "mode": "ENRICH"
+          }
+        },
+        {
+          "type": "VALIDATE",
+          "name": "Merchant must be active",
+          "condition": null,
+          "config": {
+            "checks": [
+              {
+                "field": "merchant.status",
+                "kind": "CUSTOM",
+                "value": "merchant.status == 'ACTIVE'",
+                "message": "Merchant is not active"
+              }
+            ],
+            "failureStatus": 422
+          }
+        },
+        {
+          "type": "ENRICH",
+          "name": "Encode SGQR payload",
+          "condition": null,
+          "config": {
+            "serviceName": "qr-encoder",
+            "httpMethod": "POST",
+            "url": "/sgqr/encode",
+            "responsePayload": "EmvPayload",
+            "targetField": "emv",
+            "timeoutMs": 1000,
+            "mode": "ENRICH"
+          }
+        },
+        {
+          "type": "PERSIST",
+          "name": "Save QR code",
+          "condition": null,
+          "config": {
+            "entityName": "QrCodeEntity",
+            "operation": "SAVE",
+            "idField": null
+          }
+        },
+        {
+          "type": "ERROR_HANDLING",
+          "name": "Merchant directory resilience",
+          "condition": null,
+          "config": {
+            "on": [
+              "DOWNSTREAM_UNAVAILABLE",
+              "TIMEOUT"
+            ],
+            "targetRule": "Look up merchant",
+            "retry": {
+              "maxAttempts": 3,
+              "backoffMs": 200,
+              "multiplier": 2.0
+            },
+            "fallback": {
+              "type": "ERROR_RESPONSE",
+              "httpStatus": 503,
+              "message": "Merchant directory unavailable"
+            },
+            "deadLetterDestination": null
+          }
+        }
+      ]
+    },
+    {
+      "kind": "REST",
+      "name": "getQrCode",
+      "summary": "Get a QR code and its status",
+      "description": null,
+      "tags": [
+        "QR Codes"
+      ],
+      "implementationStyle": null,
+      "parameters": [
+        {
+          "name": "qrId",
+          "location": "PATH",
+          "type": "UUID",
+          "required": true,
+          "description": "The QR id"
+        }
+      ],
+      "httpMethod": "GET",
+      "path": "/qr-codes/{qrId}",
+      "requestPayload": null,
+      "responses": [
+        {
+          "statusCode": "200",
+          "description": "The QR code",
+          "payload": "QrCode"
+        },
+        {
+          "statusCode": "404",
+          "description": "No such QR code",
+          "payload": "PaymentError"
+        }
+      ],
+      "security": [
+        "BEARER_JWT"
+      ],
+      "channel": null,
+      "operation": null,
+      "protocol": null,
+      "messagePayload": null,
+      "rules": [
+        {
+          "type": "PERSIST",
+          "name": "Load QR code",
+          "condition": null,
+          "config": {
+            "entityName": "QrCodeEntity",
+            "operation": "FIND_BY_ID",
+            "idField": "qrId"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "REST",
+      "name": "initiatePayment",
+      "summary": "Pay a scanned QR with PayNow",
+      "description": "Loads the scanned QR and checks it can still be paid, settles the amount by QR type (pre-filled or payer-entered), checks the balance, the PayNow limits and fraud screening, holds high-value or risky payments for step-up authentication, and submits the FAST credit transfer through the PayNow gateway.",
+      "tags": [
+        "Payments"
+      ],
+      "implementationStyle": null,
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "location": "HEADER",
+          "type": "STRING",
+          "required": true,
+          "description": "Repeat a request safely; the same key returns the same payment"
+        }
+      ],
+      "httpMethod": "POST",
+      "path": "/payments",
+      "requestPayload": "PaymentRequest",
+      "responses": [
+        {
+          "statusCode": "202",
+          "description": "Payment submitted; the result arrives later",
+          "payload": "PaymentReceipt"
+        },
+        {
+          "statusCode": "400",
+          "description": "Invalid request",
+          "payload": "PaymentError"
+        },
+        {
+          "statusCode": "404",
+          "description": "No such QR code",
+          "payload": "PaymentError"
+        },
+        {
+          "statusCode": "422",
+          "description": "QR not payable, or the payment fails a balance, limit or fraud check",
+          "payload": "PaymentError"
+        },
+        {
+          "statusCode": "503",
+          "description": "Core banking or PayNow is unavailable",
+          "payload": "PaymentError"
+        }
+      ],
+      "security": [
+        "BEARER_JWT"
+      ],
+      "channel": null,
+      "operation": null,
+      "protocol": null,
+      "messagePayload": null,
+      "rules": [
+        {
+          "type": "VALIDATE",
+          "name": "Validate payment",
+          "condition": null,
+          "config": {
+            "checks": [
+              {
+                "field": "qrId",
+                "kind": "REQUIRED",
+                "value": null,
+                "message": null
+              },
+              {
+                "field": "amount",
+                "kind": "MIN",
+                "value": "0.01",
+                "message": null
+              },
+              {
+                "field": "amount",
+                "kind": "MAX",
+                "value": "999999.99",
+                "message": null
+              },
+              {
+                "field": "payerAccountId",
+                "kind": "PATTERN",
+                "value": "^[0-9]{9,14}$",
+                "message": "Not a valid account number"
+              }
+            ],
+            "failureStatus": 400
+          }
+        },
+        {
+          "type": "TRANSFORM",
+          "name": "Create payment",
+          "condition": null,
+          "config": {
+            "targetPayload": "Payment",
+            "mappings": [
+              {
+                "target": "paymentId",
+                "source": null,
+                "expression": "randomUUID()"
+              },
+              {
+                "target": "currency",
+                "source": null,
+                "expression": "'SGD'"
+              },
+              {
+                "target": "status",
+                "source": null,
+                "expression": "'PENDING'"
+              },
+              {
+                "target": "createdAt",
+                "source": null,
+                "expression": "now()"
+              }
+            ]
+          }
+        },
+        {
+          "type": "PERSIST",
+          "name": "Load QR code",
+          "condition": null,
+          "config": {
+            "entityName": "QrCodeEntity",
+            "operation": "FIND_BY_ID",
+            "idField": "qrId",
+            "targetField": "qr"
+          }
+        },
+        {
+          "type": "VALIDATE",
+          "name": "QR validity",
+          "condition": null,
+          "config": {
+            "checks": [
+              {
+                "field": "qr.status",
+                "kind": "CUSTOM",
+                "value": "qr.status == 'ACTIVE'",
+                "message": "This QR has already been paid or was cancelled"
+              },
+              {
+                "field": "qr.expiresAt",
+                "kind": "CUSTOM",
+                "value": "now() < qr.expiresAt",
+                "message": "This QR has expired"
+              },
+              {
+                "field": "qr.currency",
+                "kind": "CUSTOM",
+                "value": "qr.currency == 'SGD'",
+                "message": "This QR is not a PayNow SGD QR"
+              },
+              {
+                "field": "qr.merchant.status",
+                "kind": "CUSTOM",
+                "value": "qr.merchant.status == 'ACTIVE'",
+                "message": "The merchant cannot accept payments"
+              }
+            ],
+            "failureStatus": 422
+          }
+        },
+        {
+          "type": "VALIDATE",
+          "name": "Amount by QR type",
+          "condition": null,
+          "config": {
+            "checks": [
+              {
+                "field": "amount",
+                "kind": "CUSTOM",
+                "value": "qr.qrType != 'PREFILLED' or isEmpty(amount) or amount == qr.amount",
+                "message": "The amount is fixed by this QR; submit it unchanged"
+              },
+              {
+                "field": "amount",
+                "kind": "CUSTOM",
+                "value": "qr.qrType != 'AMOUNT_ENTRY' or not isEmpty(amount)",
+                "message": "Enter the amount to pay"
+              }
+            ],
+            "failureStatus": 422
+          }
+        },
+        {
+          "type": "TRANSFORM",
+          "name": "Take the amount from a pre-filled QR",
+          "condition": "qr.qrType == 'PREFILLED'",
+          "config": {
+            "targetPayload": "Payment",
+            "mappings": [
+              {
+                "target": "amount",
+                "source": null,
+                "expression": "qr.amount"
+              }
+            ]
+          }
+        },
+        {
+          "type": "ENRICH",
+          "name": "Get account balance",
+          "condition": null,
+          "config": {
+            "serviceName": "core-banking",
+            "httpMethod": "GET",
+            "url": "/accounts/{payerAccountId}/balance",
+            "responsePayload": "AccountBalance",
+            "targetField": "balance",
+            "timeoutMs": 1000,
+            "mode": "ENRICH"
+          }
+        },
+        {
+          "type": "VALIDATE",
+          "name": "Balance check",
+          "condition": null,
+          "config": {
+            "checks": [
+              {
+                "field": "balance.status",
+                "kind": "CUSTOM",
+                "value": "balance.status == 'ACTIVE'",
+                "message": "This account cannot be debited"
+              },
+              {
+                "field": "balance.currency",
+                "kind": "CUSTOM",
+                "value": "balance.currency == 'SGD'",
+                "message": "PayNow debits SGD accounts only"
+              },
+              {
+                "field": "balance.availableBalance",
+                "kind": "CUSTOM",
+                "value": "balance.availableBalance >= amount",
+                "message": "Insufficient funds"
+              }
+            ],
+            "failureStatus": 422
+          }
+        },
+        {
+          "type": "ENRICH",
+          "name": "Get PayNow limits",
+          "condition": null,
+          "config": {
+            "serviceName": "limits-service",
+            "httpMethod": "GET",
+            "url": "/accounts/{payerAccountId}/paynow-limits",
+            "responsePayload": "TransferLimits",
+            "targetField": "limits",
+            "timeoutMs": 800,
+            "mode": "ENRICH"
+          }
+        },
+        {
+          "type": "VALIDATE",
+          "name": "Limit checks",
+          "condition": null,
+          "config": {
+            "checks": [
+              {
+                "field": "amount",
+                "kind": "CUSTOM",
+                "value": "amount <= limits.perTransactionLimit",
+                "message": "The amount is over your per-transaction PayNow limit"
+              },
+              {
+                "field": "amount",
+                "kind": "CUSTOM",
+                "value": "amount + limits.usedToday <= limits.dailyLimit",
+                "message": "The amount is over what is left of today's PayNow limit"
+              },
+              {
+                "field": "limits.transfersToday",
+                "kind": "CUSTOM",
+                "value": "limits.transfersToday < limits.maxTransfersPerDay",
+                "message": "You have reached the number of PayNow transfers allowed today"
+              }
+            ],
+            "failureStatus": 422
+          }
+        },
+        {
+          "type": "ENRICH",
+          "name": "Screen payer",
+          "condition": null,
+          "config": {
+            "serviceName": "fraud-service",
+            "httpMethod": "POST",
+            "url": "/screenings",
+            "responsePayload": "RiskAssessment",
+            "targetField": "risk",
+            "timeoutMs": 800,
+            "mode": "ENRICH"
+          }
+        },
+        {
+          "type": "VALIDATE",
+          "name": "Reject declined payers",
+          "condition": null,
+          "config": {
+            "checks": [
+              {
+                "field": "risk.decision",
+                "kind": "CUSTOM",
+                "value": "risk.decision != 'DECLINE'",
+                "message": "Payment declined by fraud screening"
+              }
+            ],
+            "failureStatus": 422
+          }
+        },
+        {
+          "type": "CONDITIONAL_ROUTE",
+          "name": "Step-up for high value or review",
+          "condition": null,
+          "config": {
+            "branches": [
+              {
+                "name": "stepUpRequired",
+                "condition": "amount > 3000 or risk.decision == 'REVIEW'",
+                "description": "ask the payer to confirm with 2FA before submitting"
+              }
+            ],
+            "otherwise": "submit straight away"
+          }
+        },
+        {
+          "type": "ENRICH",
+          "name": "Submit to PayNow via FAST",
+          "condition": null,
+          "config": {
+            "serviceName": "paynow-gateway",
+            "httpMethod": "POST",
+            "url": "/fast/credit-transfers",
+            "responsePayload": "FastSubmission",
+            "targetField": "fast",
+            "timeoutMs": 5000,
+            "mode": "ENRICH"
+          }
+        },
+        {
+          "type": "PERSIST",
+          "name": "Save payment",
+          "condition": null,
+          "config": {
+            "entityName": "PaymentEntity",
+            "operation": "SAVE",
+            "idField": null
+          }
+        },
+        {
+          "type": "PUBLISH_EVENT",
+          "name": "Announce payment initiated",
+          "condition": null,
+          "config": {
+            "protocol": "KAFKA",
+            "destination": "sgqr.payments.initiated",
+            "eventPayload": "PaymentInitiatedEvent",
+            "keyField": "paymentId"
+          }
+        },
+        {
+          "type": "TRANSFORM",
+          "name": "Build receipt",
+          "condition": null,
+          "config": {
+            "targetPayload": "PaymentReceipt",
+            "mappings": [
+              {
+                "target": "merchantName",
+                "source": null,
+                "expression": "qr.merchant.name"
+              },
+              {
+                "target": "billReference",
+                "source": null,
+                "expression": "qr.billReference"
+              },
+              {
+                "target": "networkReference",
+                "source": null,
+                "expression": "fast.networkReference"
+              }
+            ]
+          }
+        },
+        {
+          "type": "ERROR_HANDLING",
+          "name": "Core banking resilience",
+          "condition": null,
+          "config": {
+            "on": [
+              "DOWNSTREAM_UNAVAILABLE",
+              "TIMEOUT"
+            ],
+            "targetRule": "Get account balance",
+            "retry": {
+              "maxAttempts": 2,
+              "backoffMs": 200,
+              "multiplier": 2.0
+            },
+            "fallback": {
+              "type": "ERROR_RESPONSE",
+              "httpStatus": 503,
+              "message": "Cannot check your balance right now, please try again"
+            },
+            "deadLetterDestination": null
+          }
+        },
+        {
+          "type": "ERROR_HANDLING",
+          "name": "PayNow gateway resilience",
+          "condition": null,
+          "config": {
+            "on": [
+              "DOWNSTREAM_UNAVAILABLE",
+              "TIMEOUT"
+            ],
+            "targetRule": "Submit to PayNow via FAST",
+            "retry": {
+              "maxAttempts": 2,
+              "backoffMs": 500,
+              "multiplier": 2.0
+            },
+            "fallback": {
+              "type": "ERROR_RESPONSE",
+              "httpStatus": 503,
+              "message": "PayNow is unavailable, please try again"
+            },
+            "deadLetterDestination": null
+          }
+        }
+      ]
+    },
+    {
+      "kind": "REST",
+      "name": "getPayment",
+      "summary": "Get a payment and its status",
+      "description": null,
+      "tags": [
+        "Payments"
+      ],
+      "implementationStyle": null,
+      "parameters": [
+        {
+          "name": "paymentId",
+          "location": "PATH",
+          "type": "UUID",
+          "required": true,
+          "description": "The payment id"
+        }
+      ],
+      "httpMethod": "GET",
+      "path": "/payments/{paymentId}",
+      "requestPayload": null,
+      "responses": [
+        {
+          "statusCode": "200",
+          "description": "The payment",
+          "payload": "PaymentReceipt"
+        },
+        {
+          "statusCode": "404",
+          "description": "No such payment",
+          "payload": "PaymentError"
+        }
+      ],
+      "security": [
+        "BEARER_JWT"
+      ],
+      "channel": null,
+      "operation": null,
+      "protocol": null,
+      "messagePayload": null,
+      "rules": [
+        {
+          "type": "PERSIST",
+          "name": "Load payment",
+          "condition": null,
+          "config": {
+            "entityName": "PaymentEntity",
+            "operation": "FIND_BY_ID",
+            "idField": "paymentId"
+          }
+        },
+        {
+          "type": "TRANSFORM",
+          "name": "Build receipt",
+          "condition": null,
+          "config": {
+            "targetPayload": "PaymentReceipt",
+            "mappings": [
+              {
+                "target": "merchantName",
+                "source": null,
+                "expression": "qr.merchant.name"
+              },
+              {
+                "target": "billReference",
+                "source": null,
+                "expression": "qr.billReference"
+              },
+              {
+                "target": "networkReference",
+                "source": null,
+                "expression": "fast.networkReference"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "kind": "ASYNC",
+      "name": "handleSettlement",
+      "summary": "Record the FAST settlement result",
+      "description": null,
+      "tags": [
+        "Settlement"
+      ],
+      "implementationStyle": "PROCESSING_ROUTE",
+      "parameters": [
+        {
+          "name": "correlationId",
+          "location": "HEADER",
+          "type": "STRING",
+          "required": false,
+          "description": "Trace id from the PayNow gateway"
+        }
+      ],
+      "httpMethod": null,
+      "path": null,
+      "requestPayload": null,
+      "responses": [],
+      "security": [],
+      "channel": "fast.settlement.results",
+      "operation": "RECEIVE",
+      "protocol": "KAFKA",
+      "messagePayload": "SettlementResult",
+      "rules": [
+        {
+          "type": "CONDITIONAL_ROUTE",
+          "name": "Route by settlement status",
+          "condition": null,
+          "config": {
+            "branches": [
+              {
+                "name": "settled",
+                "condition": "status == 'SETTLED'",
+                "description": "mark the payment and the QR paid"
+              },
+              {
+                "name": "rejected",
+                "condition": "status == 'REJECTED'",
+                "description": "mark the payment rejected with its reason code"
+              }
+            ],
+            "otherwise": "log and ignore the message"
+          }
+        },
+        {
+          "type": "PERSIST",
+          "name": "Update payment",
+          "condition": null,
+          "config": {
+            "entityName": "PaymentEntity",
+            "operation": "UPDATE",
+            "idField": "paymentId"
+          }
+        },
+        {
+          "type": "PUBLISH_EVENT",
+          "name": "Notify merchant",
+          "condition": null,
+          "config": {
+            "protocol": "KAFKA",
+            "destination": "sgqr.payments.completed",
+            "eventPayload": "PaymentCompletedEvent",
+            "keyField": "paymentId"
+          }
+        },
+        {
+          "type": "ERROR_HANDLING",
+          "name": "Dead-letter unprocessable results",
+          "condition": null,
+          "config": {
+            "on": [
+              "ANY"
+            ],
+            "targetRule": null,
+            "retry": {
+              "maxAttempts": 3,
+              "backoffMs": 1000,
+              "multiplier": 2.0
+            },
+            "fallback": null,
+            "deadLetterDestination": "fast.settlement.results.DLT"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "ASYNC",
+      "name": "paymentInitiated",
+      "summary": "Payments submitted to FAST",
+      "description": null,
+      "tags": [
+        "Events"
+      ],
+      "implementationStyle": null,
+      "parameters": [],
+      "httpMethod": null,
+      "path": null,
+      "requestPayload": null,
+      "responses": [],
+      "security": [],
+      "channel": "sgqr.payments.initiated",
+      "operation": "SEND",
+      "protocol": "KAFKA",
+      "messagePayload": "PaymentInitiatedEvent",
+      "rules": []
+    },
+    {
+      "kind": "ASYNC",
+      "name": "paymentCompleted",
+      "summary": "Payments settled or rejected, for merchants",
+      "description": "Merchant systems subscribe to release goods or print receipts.",
+      "tags": [
+        "Events"
+      ],
+      "implementationStyle": null,
+      "parameters": [],
+      "httpMethod": null,
+      "path": null,
+      "requestPayload": null,
+      "responses": [],
+      "security": [],
+      "channel": "sgqr.payments.completed",
+      "operation": "SEND",
+      "protocol": "KAFKA",
+      "messagePayload": "PaymentCompletedEvent",
+      "rules": []
+    }
+  ]
+}

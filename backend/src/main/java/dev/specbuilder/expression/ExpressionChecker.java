@@ -171,6 +171,11 @@ public final class ExpressionChecker {
                 yield Type.STRING;
             }
             case CONCAT -> Type.STRING;
+            case PLUS_SECONDS -> {
+                require(args.get(0), Type.DATE_TIME, name);
+                require(args.get(1), Type.NUMBER, name);
+                yield Type.DATE_TIME;
+            }
             case COALESCE -> args.stream().filter(t -> t != Type.NULL && t != Type.UNKNOWN).findFirst().orElse(Type.UNKNOWN);
             case ONE_OF -> {
                 Type first = args.getFirst();

@@ -43,6 +43,10 @@
 <#assign p = s.data>
 <#if p.operation == "SAVE">
         return ${p.storeField}.save(current);
+<#elseif p.operation == "FIND_BY_ID" && p.assignment??>
+        ${p.sourceType} loaded = ${p.storeField}.findById(${p.idExpr});
+        ${j.indent(p.assignment, 8)}
+        return current;
 <#elseif p.operation == "FIND_BY_ID">
         return ${p.storeField}.findById(${p.idExpr});
 <#elseif p.operation == "UPDATE" && p.sameType>

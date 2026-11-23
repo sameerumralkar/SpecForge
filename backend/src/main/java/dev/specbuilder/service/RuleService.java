@@ -10,7 +10,9 @@ import dev.specbuilder.domain.ProcessingRule;
 import dev.specbuilder.domain.rule.PersistConfig;
 import dev.specbuilder.domain.rule.RuleConfig;
 import dev.specbuilder.expression.ExpressionParser;
+import dev.specbuilder.repository.EndpointRepository;
 import dev.specbuilder.repository.PayloadRepository;
+import dev.specbuilder.domain.rule.TransformConfig;
 import dev.specbuilder.validation.IdentifierRules;
 import dev.specbuilder.validation.NotFoundException;
 import dev.specbuilder.validation.ValidationErrors;
@@ -28,8 +30,11 @@ public class RuleService {
     private final EndpointService endpointService;
     private final PayloadRepository payloads;
     private final RuleConfigCodec codec;
+    private final EndpointRepository endpointRepository;
 
-    public RuleService(EndpointService endpointService, PayloadRepository payloads, RuleConfigCodec codec) {
+    public RuleService(EndpointService endpointService, PayloadRepository payloads, RuleConfigCodec codec,
+                       EndpointRepository endpointRepository) {
+        this.endpointRepository = endpointRepository;
         this.endpointService = endpointService;
         this.payloads = payloads;
         this.codec = codec;
@@ -149,7 +154,39 @@ public class RuleService {
         List<RuleChainAnalyzer.Step> steps = endpoint.getRules().stream()
                 .map(r -> new RuleChainAnalyzer.Step(r, codec.read(r.getType(), r.getConfig())))
                 .toList();
-        return RuleChainAnalyzer.analyze(endpoint, steps, projectPayloads(endpoint));
+        Map<UUID, Payload> all = projectPayloads(endpoint);
+        return RuleChainAnalyzer.analyze(endpoint, steps, all, storedEntities(endpoint, all));
+    }
+
+    /**
+     * What each entity holds, as code generation works it out: the payload a SAVE rule stores, in any
+     * endpoint of the project. A FIND_BY_ID of that entity gives back this payload.
+     */
+    private Map<String, Payload> storedEntities(Endpoint endpoint, Map<UUID, Payload> all) {
+        Map<String, Payload> stored = new HashMap<>();
+        List<Endpoint> endpoints = endpointRepository.findByProjectId(endpoint.getProject().getId());
+        for (int pass = 0; pass < 2; pass++) { // twice, so a lookup before the SAVE that defines it is followed
+            for (Endpoint e : endpoints) {
+                Payload current = e.inputPayload();
+                for (ProcessingRule r : e.getRules()) {
+                    RuleConfig config;
+                    try {
+                        config = codec.read(r.getType(), r.getConfig());
+                    } catch (RuntimeException unreadable) {
+                        continue;
+                    }
+                    if (config instanceof TransformConfig t && t.targetPayloadId() != null) {
+                        current = all.get(t.targetPayloadId());
+                    } else if (config instanceof PersistConfig p && p.operation() == PersistConfig.Operation.SAVE && current != null) {
+                        stored.putIfAbsent(p.entityName(), current);
+                    } else if (config instanceof PersistConfig p && p.operation() == PersistConfig.Operation.FIND_BY_ID
+                            && (p.targetField() == null || p.targetField().isBlank()) && stored.containsKey(p.entityName())) {
+                        current = stored.get(p.entityName());
+                    }
+                }
+            }
+        }
+        return stored;
     }
 
     private RuleView view(Endpoint endpoint, ProcessingRule rule) {

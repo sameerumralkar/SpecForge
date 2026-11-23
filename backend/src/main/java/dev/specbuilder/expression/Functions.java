@@ -23,7 +23,8 @@ public enum Functions {
     TRIM("trim", 1, 1, false, "trim(name)", "the text without leading and trailing spaces"),
     CONCAT("concat", 2, 10, false, "concat(firstName, ' ', lastName)", "joins values into one text"),
     COALESCE("coalesce", 2, 10, false, "coalesce(nickname, name)", "the first value that is not null"),
-    ONE_OF("oneOf", 2, 20, false, "oneOf(status, 'PAID', 'SHIPPED')", "true if the first value equals any of the others");
+    ONE_OF("oneOf", 2, 20, false, "oneOf(status, 'PAID', 'SHIPPED')", "true if the first value equals any of the others"),
+    PLUS_SECONDS("plusSeconds", 2, 2, false, "plusSeconds(createdAt, expiresInSeconds)", "a date-time moved forward by a number of seconds");
 
     private static final Map<String, Functions> BY_NAME = Arrays.stream(values())
             .collect(Collectors.toMap(Functions::fnName, Function.identity()));

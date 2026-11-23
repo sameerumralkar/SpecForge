@@ -96,6 +96,10 @@ class ExpressionParserTest {
         assertThat(ExpressionChecker.checkValue(ExpressionParser.parse("total * 2"), ExpressionChecker.Type.STRING, scope))
                 .containsExactly("this gives a number, but text is needed");
         assertThat(ExpressionChecker.checkValue(ExpressionParser.parse("null"), ExpressionChecker.Type.UUID, scope)).isEmpty();
+        assertThat(ExpressionChecker.checkCondition(ExpressionParser.parse("now() < plusSeconds(createdAt, total)"), scope)).isEmpty();
+        assertThat(ExpressionChecker.checkValue(ExpressionParser.parse("plusSeconds(now(), 300)"), ExpressionChecker.Type.DATE_TIME, scope)).isEmpty();
+        assertThat(ExpressionChecker.checkCondition(ExpressionParser.parse("plusSeconds(status, 'x') > now()"), scope))
+                .containsExactly("plusSeconds() needs a date-time, not text", "plusSeconds() needs a number, not text");
         assertThat(List.of(ExpressionChecker.Type.values())).hasSize(10);
     }
 }

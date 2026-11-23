@@ -30,16 +30,23 @@ public final class RuleChainAnalyzer {
 
     private final Endpoint endpoint;
     private final Map<UUID, Payload> payloads;
+    private final Map<String, Payload> storedEntities;
     private final List<RuleWarning> warnings = new ArrayList<>();
     private ProcessingRule rule;
 
-    private RuleChainAnalyzer(Endpoint endpoint, Map<UUID, Payload> payloads) {
+    private RuleChainAnalyzer(Endpoint endpoint, Map<UUID, Payload> payloads, Map<String, Payload> storedEntities) {
         this.endpoint = endpoint;
         this.payloads = payloads;
+        this.storedEntities = storedEntities;
     }
 
     public static Result analyze(Endpoint endpoint, List<Step> steps, Map<UUID, Payload> payloads) {
-        return new RuleChainAnalyzer(endpoint, payloads).run(steps);
+        return analyze(endpoint, steps, payloads, Map.of());
+    }
+
+    /** {@code storedEntities}: the payload each entity holds, so a FIND_BY_ID's result can be checked. */
+    public static Result analyze(Endpoint endpoint, List<Step> steps, Map<UUID, Payload> payloads, Map<String, Payload> storedEntities) {
+        return new RuleChainAnalyzer(endpoint, payloads, storedEntities).run(steps);
     }
 
     private Result run(List<Step> steps) {
@@ -63,7 +70,13 @@ public final class RuleChainAnalyzer {
                 case TransformConfig c -> current = transform(c, in);
                 case EnrichConfig c -> enrich(c, in);
                 case ConditionalRouteConfig c -> c.branches().forEach(b -> condition("branch " + b.name(), b.condition(), in));
-                case PersistConfig c -> persist(c, in);
+                case PersistConfig c -> {
+                    persist(c, in);
+                    if (c.operation() == PersistConfig.Operation.FIND_BY_ID && (c.targetField() == null || c.targetField().isBlank())
+                            && storedEntities.containsKey(c.entityName())) {
+                        current = storedEntities.get(c.entityName());
+                    }
+                }
                 case PublishEventConfig c -> publish(c, in);
                 case SplitAggregateConfig c -> split(c, in);
                 case ErrorHandlingConfig c -> errorHandling(c, ruleNames);
@@ -144,6 +157,22 @@ public final class RuleChainAnalyzer {
             }
         } else {
             valueType(in, c.idField());
+        }
+        if (c.targetField() != null && !c.targetField().isBlank()) {
+            if (c.operation() != PersistConfig.Operation.FIND_BY_ID) {
+                warn("only FIND_BY_ID can put the record into a field; clear the target field");
+            } else if (in == null) {
+                warn("there is no payload to put the loaded " + c.entityName() + " into");
+            } else {
+                FieldPathResolver.Resolution r = resolve(in, c.targetField());
+                Payload stored = storedEntities.get(c.entityName());
+                if (r != null && r.valueType() != FieldType.OBJECT) {
+                    warn(c.targetField() + " is not an object field, so it cannot hold the loaded " + c.entityName());
+                } else if (r != null && stored != null && !stored.getId().equals(r.field().getRefPayload().getId())) {
+                    warn(c.targetField() + " holds a " + r.field().getRefPayload().getName() + ", but " + c.entityName()
+                            + " stores a " + stored.getName());
+                }
+            }
         }
         if (payloads.values().stream().anyMatch(p -> p.getName().equalsIgnoreCase(c.entityName()))) {
             warn("the entity name " + c.entityName() + " is also a payload name; pick another, e.g. " + c.entityName() + "Entity");

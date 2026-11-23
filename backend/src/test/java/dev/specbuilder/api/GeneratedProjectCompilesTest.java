@@ -101,6 +101,33 @@ class GeneratedProjectCompilesTest extends ApiTestSupport {
         compile(p, "kitchen-sink");
     }
 
+    /**
+     * The SGQR example: a FIND_BY_ID into a field, plusSeconds, the two QR types, balance and limit checks
+     * in an implementation class, and a Camel route.
+     */
+    @Test
+    void theSgqrExampleCompiles() throws Exception {
+        String example = Files.readString(Path.of("../examples/sgqr-paynow-payments.specbuilder.json"));
+        Response imported = post("/api/projects/import", JSON.readTree(example)).expect(201);
+        String p = imported.json().at("/project/id").asString();
+        track(p);
+        assertThat(imported.json().get("warnings").size()).isZero();
+        for (JsonNode e : get("/api/projects/" + p + "/endpoints").json()) {
+            JsonNode chain = get("/api/projects/" + p + "/endpoints/" + e.get("id").asString() + "/rules").json();
+            assertThat(chain.get("warnings").size()).as(e.get("name") + " warnings: " + chain.get("warnings")).isZero();
+        }
+        JsonNode code = get("/api/projects/" + p + "/code").json();
+        String service = null;
+        for (JsonNode f : code.get("files")) {
+            if (f.get("path").asString().endsWith("/service/PaymentsServiceImpl.java")) service = f.get("content").asString();
+        }
+        assertThat(service)
+                .contains("QrCode loaded = qrCodeEntityStore.findById(", "current.setQr(loaded);")
+                .contains("throw new RuleViolationException(422, \"This QR has expired\");")
+                .contains("throw new RuleViolationException(422, \"Insufficient funds\");");
+        compile(p, "sgqr");
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private String sample() {

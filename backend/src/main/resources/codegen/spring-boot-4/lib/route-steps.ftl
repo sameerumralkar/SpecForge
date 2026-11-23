@@ -92,6 +92,12 @@
 <#assign p = s.data>
 <#if p.operation == "SAVE">
             .bean(${p.storeField}, "save")
+<#elseif p.operation == "FIND_BY_ID" && p.assignment??>
+            .process(exchange -> {
+                ${body(s.inType)}
+                ${p.sourceType} loaded = ${p.storeField}.findById(${p.idExpr});
+                ${j.indent(p.assignment, 16)}
+            })
 <#elseif p.operation == "FIND_BY_ID">
             .process(exchange -> {
                 ${body(s.inType)}

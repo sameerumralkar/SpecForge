@@ -7,7 +7,9 @@ public record PersistConfig(
         @NotBlank @Pattern(regexp = "[A-Z][A-Za-z0-9]*", message = "use an UpperCamelCase class name, e.g. OrderEntity")
         String entityName,
         Operation operation,
-        String idField) implements RuleConfig {
+        String idField,
+        /** FIND_BY_ID only: put the loaded record into this field of the current payload instead of replacing it. */
+        String targetField) implements RuleConfig {
 
     public enum Operation { SAVE, UPDATE, DELETE, FIND_BY_ID }
 
@@ -22,7 +24,9 @@ public record PersistConfig(
             case SAVE -> "Save " + ctx.current() + " as a new " + entityName + ".";
             case UPDATE -> "Update the stored " + entityName + id + " from " + ctx.current() + ".";
             case DELETE -> "Delete the " + entityName + id + ".";
-            case FIND_BY_ID -> "Load the " + entityName + id + " from the database.";
+            case FIND_BY_ID -> RuleConfig.blank(targetField)
+                    ? "Load the " + entityName + id + " from the database."
+                    : "Load the " + entityName + id + " from the database into " + targetField + ".";
         };
     }
 }

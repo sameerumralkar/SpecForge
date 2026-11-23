@@ -426,7 +426,8 @@ final class DiagramBuilder {
                     }
                     case FIND_BY_ID -> {
                         items.add(call(self, db, "find " + p.entityName() + id));
-                        items.add(reply(db, self, p.entityName()));
+                        items.add(reply(db, self, p.entityName()
+                                + (p.targetField() == null || p.targetField().isBlank() ? "" : " → " + p.targetField())));
                         items.add(new Block(BlockType.BREAK, List.of(new Section("not found", List.of(errorExit(ctx, "404 not found"))))));
                     }
                     case UPDATE -> {

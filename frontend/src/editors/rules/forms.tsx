@@ -193,6 +193,7 @@ export function ConditionalForm({ config, onChange, err, ctx }: RuleFormProps) {
 export function PersistForm({ config, onChange, err, ctx }: RuleFormProps) {
   const set = (patch: Row) => onChange({ ...config, ...patch })
   return (
+    <Stack spacing={2}>
     <Stack direction="row" spacing={2}>
       <TextField label="Entity name" placeholder="OrderEntity" value={s(config.entityName)} onChange={(e) => set({ entityName: e.target.value })}
         error={!!err('entityName')} helperText={err('entityName') ?? 'JPA entity class to generate'} />
@@ -200,6 +201,12 @@ export function PersistForm({ config, onChange, err, ctx }: RuleFormProps) {
         options={ctx.meta?.persistOperations ?? ['SAVE', 'UPDATE', 'DELETE', 'FIND_BY_ID']} />
       <FieldPathInput label="Id field" value={s(config.idField)} onChange={(idField) => set({ idField })} options={pathOptions(ctx.current, ctx)}
         error={err('idField')} helperText="Needed for UPDATE, DELETE and FIND_BY_ID" />
+    </Stack>
+    {config.operation === 'FIND_BY_ID' && (
+      <FieldPathInput label="Load into field (optional)" value={s(config.targetField)} onChange={(targetField) => set({ targetField })}
+        options={pathOptions(ctx.current, { ...ctx, parameters: [] }, (t) => t === 'OBJECT')} error={err('targetField')}
+        helperText={`Keep the ${ctx.current?.name ?? "payload"} and put the loaded record into this field, e.g. to check it in later steps. Empty: the loaded record replaces the payload.`} />
+    )}
     </Stack>
   )
 }
