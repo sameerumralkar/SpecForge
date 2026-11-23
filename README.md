@@ -1,4 +1,4 @@
-# Spec Builder
+# SpecForge - Specifications Builder
 
 Design APIs, attach processing rules, and generate OpenAPI/AsyncAPI specs, runnable Spring Boot / Camel
 code and architecture diagrams.
