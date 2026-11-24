@@ -21,9 +21,6 @@ reservedNames: [Valid, DecimalMax, DecimalMin, Email, Max, Min, NotNull, Pattern
   ResourceAccessException, HttpServerErrorException]
 files:
   - { template: pom.xml.ftl, output: pom.xml }
-  - { template: static/mvnw, output: mvnw, copy: true, executable: true }
-  - { template: static/mvnw.cmd, output: mvnw.cmd, copy: true }
-  - { template: static/maven-wrapper.properties, output: .mvn/wrapper/maven-wrapper.properties, copy: true }
   - { template: static/gitignore, output: .gitignore, copy: true }
   - { template: README.md.ftl, output: README.md }
   - { template: application.yml.ftl, output: src/main/resources/application.yml }

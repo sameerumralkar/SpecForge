@@ -13,22 +13,22 @@ code and architecture diagrams.
 
 ## Run it
 
-Needs Java 21 and Node 22+. Maven downloads itself through the wrapper.
+Needs Java 21, Maven 3.9+ and Node 22+.
 
 ```bash
-cd backend && ./mvnw spring-boot:run      # API on http://localhost:8080
+cd backend && mvn spring-boot:run          # API on http://localhost:8080
 cd frontend && npm install && npm run dev  # UI on http://localhost:5173 (calls /api on :8080)
 ```
 
 Tests:
 
 ```bash
-cd backend && ./mvnw test     # 135 tests; see the notes below
+cd backend && mvn test        # 135 tests; see the notes below
 cd frontend && npm test       # 48 component and unit tests (Vitest + Testing Library)
 ```
 
 - The PostgreSQL test needs Docker, and is skipped without it.
-- `GeneratedProjectCompilesTest` generates two projects and runs `./mvnw compile test-compile` on each, so
+- `GeneratedProjectCompilesTest` generates three projects and runs `mvn compile test-compile` on each, so
   the first run downloads their dependencies. Skip it with `-Dcodegen.compile.skip=true`.
 
 ```
@@ -42,7 +42,7 @@ To use PostgreSQL instead:
 
 ```bash
 docker compose up -d
-cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
+cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=postgres
 ```
 
 ## Versions
@@ -139,7 +139,7 @@ API: `GET /api/projects/{id}/specs` (both specs with problems), `GET …/specs/{
 the generator finds a problem; the Code tab lists what to fix.
 
 The generated project targets Spring Boot 4.1 and Apache Camel 4.23 (the Boot version Camel is built for),
-with Java 21, MapStruct and Resilience4j. It compiles with `./mvnw compile` with no edits, and a test
+with Java 21, MapStruct and Resilience4j. It compiles with `mvn compile` with no edits, and a test
 checks this on every build. It contains:
 
 - `dto`: one class per payload, with Bean Validation from the field constraints.

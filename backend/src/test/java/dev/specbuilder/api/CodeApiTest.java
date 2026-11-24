@@ -23,7 +23,7 @@ class CodeApiTest extends ApiTestSupport {
         Response code = get("/api/projects/" + p + "/code").expect(200);
         assertThat(code.json().get("ready").asBoolean()).as(code.json().get("problems").toString()).isTrue();
         List<String> paths = texts(code.json().get("files"), "path");
-        assertThat(paths).contains("pom.xml", "mvnw", "README.md", "src/main/resources/application.yml",
+        assertThat(paths).doesNotContain("mvnw", "mvnw.cmd", ".mvn/wrapper/maven-wrapper.properties").contains("pom.xml", "README.md", "src/main/resources/application.yml",
                 "src/main/java/com/example/orders/OrderServiceApplication.java",
                 "src/main/java/com/example/orders/dto/CreateOrderRequest.java",
                 "src/main/java/com/example/orders/web/OrdersController.java",

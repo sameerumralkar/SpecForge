@@ -29,7 +29,7 @@ class GenerationApiTest extends ApiTestSupport {
         JsonNode list = get(base + "/generations?kind=CODE").expect(200).json();
         assertThat(list.size()).as("an identical download does not add a snapshot").isEqualTo(1);
         assertThat(list.at("/0/reason").asString()).isEqualTo("DOWNLOAD");
-        assertThat(list.at("/0/fileCount").asInt()).isEqualTo(42);
+        assertThat(list.at("/0/fileCount").asInt()).isEqualTo(39);
         String snapshot = list.at("/0/id").asString();
 
         JsonNode unchanged = get(base + "/generations/" + snapshot + "/diff").expect(200).json();

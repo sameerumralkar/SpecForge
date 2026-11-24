@@ -20,7 +20,7 @@ export function HomePage() {
     return (
       <Box sx={{ p: 4 }}>
         <ErrorSummary error={projects.error} />
-        <Typography>Is the backend running? Start it with <code>./mvnw spring-boot:run</code> in <code>backend/</code>.</Typography>
+        <Typography>Is the backend running? Start it with <code>mvn spring-boot:run</code> in <code>backend/</code>.</Typography>
       </Box>
     )
   }

@@ -37,7 +37,7 @@ export default defineConfig({
   plugins: [react(), monacoLanguages()],
   server: {
     port: 5173,
-    // The Spring Boot backend; start it with ./mvnw spring-boot:run in ../backend.
+    // The Spring Boot backend; start it with mvn spring-boot:run in ../backend.
     proxy: { '/api': 'http://localhost:8080' },
   },
   build: {

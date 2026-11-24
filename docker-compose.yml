@@ -1,6 +1,6 @@
 # Optional: run the backend against PostgreSQL instead of the local H2 file.
 #   docker compose up -d
-#   cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
+#   cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=postgres
 services:
   postgres:
     image: postgres:17-alpine

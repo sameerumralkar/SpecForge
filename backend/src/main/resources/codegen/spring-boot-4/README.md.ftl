@@ -7,8 +7,8 @@
 ## Build and run
 
 ```bash
-./mvnw compile          # compiles as generated, no edits needed
-./mvnw spring-boot:run  # http://localhost:8080
+mvn compile            # compiles as generated, no edits needed
+mvn spring-boot:run    # http://localhost:8080
 ```
 <#if features.kafka || features.jms || features.amqp || features.clients>
 

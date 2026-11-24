@@ -25,9 +25,9 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Generates projects, unzips them and runs their own Maven wrapper: the generated code must
- * compile with no edits. Needs network access the first time (Maven downloads dependencies).
- * Skip with -Dcodegen.compile.skip=true.
+ * Generates projects, unzips them and builds each with Maven: the generated code must compile
+ * with no edits. Runs {@code mvn} from the PATH, or the command named by -Dcodegen.mvn. Needs
+ * network access the first time (Maven downloads dependencies). Skip with -Dcodegen.compile.skip=true.
  */
 @DisabledIfSystemProperty(named = "codegen.compile.skip", matches = "true")
 class GeneratedProjectCompilesTest extends ApiTestSupport {
@@ -166,7 +166,7 @@ class GeneratedProjectCompilesTest extends ApiTestSupport {
         Files.write(zip, result.getResponse().getContentAsByteArray());
         Path project = unzip(zip, dir);
 
-        Process mvn = new ProcessBuilder("./mvnw", "-q", "-B", "-ntp", "compile", "test-compile")
+        Process mvn = new ProcessBuilder(System.getProperty("codegen.mvn", "mvn"), "-q", "-B", "-ntp", "compile", "test-compile")
                 .directory(project.toFile())
                 .redirectErrorStream(true)
                 .redirectOutput(dir.resolve("build.log").toFile())
@@ -199,7 +199,8 @@ class GeneratedProjectCompilesTest extends ApiTestSupport {
                 }
             }
         }
-        assertThat(new File(top.toFile(), "mvnw").canExecute()).as("mvnw keeps its executable bit").isTrue();
+        assertThat(new File(top.toFile(), "pom.xml")).as("the project has a pom.xml").exists();
+        assertThat(new File(top.toFile(), "mvnw")).as("no Maven wrapper is generated").doesNotExist();
         return top;
     }
 
