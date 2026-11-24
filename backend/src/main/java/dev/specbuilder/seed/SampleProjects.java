@@ -5,6 +5,7 @@ import dev.specbuilder.domain.*;
 import dev.specbuilder.domain.rule.RuleType;
 import dev.specbuilder.repository.ProjectRepository;
 import dev.specbuilder.service.EndpointService;
+import dev.specbuilder.service.ErrorCodeService;
 import dev.specbuilder.service.PayloadService;
 import dev.specbuilder.service.ProjectService;
 import dev.specbuilder.service.RuleService;
@@ -32,9 +33,11 @@ public class SampleProjects {
     private final PayloadService payloads;
     private final EndpointService endpoints;
     private final RuleService rules;
+    private final ErrorCodeService errorCodes;
 
     public SampleProjects(ProjectRepository projectRepository, ProjectService projects, PayloadService payloads,
-                          EndpointService endpoints, RuleService rules) {
+                          EndpointService endpoints, RuleService rules, ErrorCodeService errorCodes) {
+        this.errorCodes = errorCodes;
         this.projectRepository = projectRepository;
         this.projects = projects;
         this.payloads = payloads;
@@ -127,13 +130,13 @@ public class SampleProjects {
                         Map.of("target", "status", "expression", "'PENDING'"),
                         Map.of("target", "total", "expression", "sum(items[].quantity * items[].unitPrice)"),
                         Map.of("target", "createdAt", "expression", "now()"))));
-        rule(p, createOrder, RuleType.ENRICH, "Enrich customer", null, Map.of(
+        UUID enrichCustomer = rule(p, createOrder, RuleType.ENRICH, "Enrich customer", null, Map.of(
                 "serviceName", "customer-service", "httpMethod", "GET", "url", "/customers/{customerId}",
                 "responsePayloadId", customer.toString(), "targetField", "customer", "timeoutMs", 2000));
-        rule(p, createOrder, RuleType.PERSIST, "Save order", null, Map.of("entityName", "OrderEntity", "operation", "SAVE"));
-        rule(p, createOrder, RuleType.PUBLISH_EVENT, "Publish OrderCreated", null, Map.of(
+        UUID saveOrder = rule(p, createOrder, RuleType.PERSIST, "Save order", null, Map.of("entityName", "OrderEntity", "operation", "SAVE"));
+        UUID publishCreated = rule(p, createOrder, RuleType.PUBLISH_EVENT, "Publish OrderCreated", null, Map.of(
                 "protocol", "KAFKA", "destination", "orders.created", "eventPayloadId", created.toString(), "keyField", "orderId"));
-        rule(p, createOrder, RuleType.ERROR_HANDLING, "Customer service resilience", null, Map.of(
+        UUID resilience = rule(p, createOrder, RuleType.ERROR_HANDLING, "Customer service resilience", null, Map.of(
                 "on", List.of("DOWNSTREAM_UNAVAILABLE", "TIMEOUT"),
                 "targetRule", "Enrich customer",
                 "retry", Map.of("maxAttempts", 3, "backoffMs", 500, "multiplier", 2.0),
@@ -143,7 +146,7 @@ public class SampleProjects {
         UUID getOrder = rest(p, "getOrder", "Get one order", HttpMethod.GET, "/orders/{orderId}",
                 List.of(new ParameterDto("orderId", ParameterLocation.PATH, FieldType.UUID, true, "The order id")), null,
                 List.of(response("200", "The order", order), response("404", "No such order", orderError)));
-        rule(p, getOrder, RuleType.PERSIST, "Load order", null,
+        UUID loadOrder = rule(p, getOrder, RuleType.PERSIST, "Load order", null,
                 Map.of("entityName", "OrderEntity", "operation", "FIND_BY_ID", "idField", "orderId"));
         rest(p, "listOrders", "List orders", HttpMethod.GET, "/orders",
                 List.of(new ParameterDto("status", ParameterLocation.QUERY, FieldType.STRING, false, "Only orders with this status"),
@@ -163,12 +166,28 @@ public class SampleProjects {
                         Map.of("name", "paymentSucceeded", "condition", "status == 'SUCCEEDED'", "description", "mark the order PAID"),
                         Map.of("name", "paymentFailed", "condition", "status == 'FAILED'", "description", "cancel the order")),
                 "otherwise", "log and ignore the message"));
-        rule(p, paymentCompleted, RuleType.PERSIST, "Update order status", null,
+        UUID updateStatus = rule(p, paymentCompleted, RuleType.PERSIST, "Update order status", null,
                 Map.of("entityName", "OrderEntity", "operation", "UPDATE", "idField", "orderId"));
         rule(p, paymentCompleted, RuleType.ERROR_HANDLING, "Dead-letter failed payments", null, Map.of(
                 "on", List.of("ANY"),
                 "retry", Map.of("maxAttempts", 3, "backoffMs", 1000, "multiplier", 2.0),
                 "deadLetterDestination", "payments.completed.DLT"));
+
+        // ---- Error codes, linked to the fields and steps that fail with them ----
+        code(p, "ORD-001", ErrorCategory.VALIDATION, null, "customerId is required",
+                ErrorLink.field(createRequest, "customerId"));
+        code(p, "ORD-002", ErrorCategory.VALIDATION, null, "An order needs at least one item",
+                ErrorLink.field(createRequest, "items"));
+        code(p, "ORD-003", ErrorCategory.VALIDATION, null, "Each item's quantity must be from 1 to 1000",
+                ErrorLink.field(item, "quantity"));
+        code(p, "ORD-004", ErrorCategory.VALIDATION, null, "A SKU is 4 to 20 upper-case letters, digits or dashes",
+                ErrorLink.field(item, "sku"));
+        code(p, "ORD-010", ErrorCategory.DOWNSTREAM, null, "Customer service unavailable",
+                ErrorLink.rule(enrichCustomer), ErrorLink.rule(resilience));
+        code(p, "ORD-011", ErrorCategory.NOT_FOUND, null, "No order with this id", ErrorLink.rule(loadOrder));
+        code(p, "ORD-020", ErrorCategory.PERSISTENCE, null, "The order could not be saved",
+                ErrorLink.rule(saveOrder), ErrorLink.rule(updateStatus));
+        code(p, "ORD-021", ErrorCategory.MESSAGING, null, "OrderCreated could not be published", ErrorLink.rule(publishCreated));
 
         return projects.get(p);
     }
@@ -232,8 +251,13 @@ public class SampleProjects {
         return value == null ? Map.of("field", field, "kind", kind) : Map.of("field", field, "kind", kind, "value", value);
     }
 
-    private void rule(UUID project, UUID endpoint, RuleType type, String name, String condition, Map<String, Object> config) {
+    private UUID rule(UUID project, UUID endpoint, RuleType type, String name, String condition, Map<String, Object> config) {
         JsonNode node = JSON.valueToTree(config);
-        rules.create(project, endpoint, new RuleRequest(type, name, condition, node, null));
+        return rules.create(project, endpoint, new RuleRequest(type, name, condition, node, null)).id();
+    }
+
+    private void code(UUID project, String code, ErrorCategory category, Integer status, String message, ErrorLink... links) {
+        UUID id = errorCodes.create(project, new ErrorCodeRequest(code, message, status, category, null)).id();
+        errorCodes.setLinks(project, id, new ErrorLinksRequest(List.of(links)));
     }
 }

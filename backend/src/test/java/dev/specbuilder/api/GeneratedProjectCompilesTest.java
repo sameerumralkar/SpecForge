@@ -119,8 +119,10 @@ class GeneratedProjectCompilesTest extends ApiTestSupport {
         JsonNode code = get("/api/projects/" + p + "/code").json();
         String service = null;
         String request = null;
+        String catalog = null;
         for (JsonNode f : code.get("files")) {
             if (f.get("path").asString().endsWith("/service/PaymentsServiceImpl.java")) service = f.get("content").asString();
+            if (f.get("path").asString().endsWith("/error/ErrorCatalog.java")) catalog = f.get("content").asString();
             if (f.get("path").asString().endsWith("/dto/PaymentRequest.java")) request = f.get("content").asString();
         }
         // Restructured around inventory objects: Money{value, currency} and Payer{accountId, name}.
@@ -128,9 +130,18 @@ class GeneratedProjectCompilesTest extends ApiTestSupport {
         assertThat(get("/api/projects/" + p + "/payloads?role=OBJECT").json().toString()).contains("\"Money\"", "\"Payer\"", "\"Merchant\"");
         assertThat(service)
                 .contains("QrCode loaded = qrCodeEntityStore.findById(", "current.setQr(loaded);")
-                .contains("throw new RuleViolationException(422, \"This QR has expired\");")
-                .contains("throw new RuleViolationException(422, \"Insufficient funds\");")
+                .contains("throw new RuleViolationException(422, \"SGQR-2011\", \"This QR has expired\");")
+                .contains("throw new RuleViolationException(422, \"SGQR-3003\", \"Insufficient funds\");")
                 .contains("getAvailableBalance()).map($v -> $v.getValue())");
+        // Error codes: a check's own message wins over the code's; without one, the field's code gives the message.
+        assertThat(service)
+                .contains("throw new RuleViolationException(400, \"SGQR-1005\", \"Not a valid account number\");")
+                .contains("throw new RuleViolationException(400, \"SGQR-1003\", \"The amount must be from 0.01 to 999,999.99\");")
+                .contains("throw new RuleViolationException(503, \"SGQR-5002\", \"Cannot check your balance right now, please try again\");")
+                .contains("Fails with SGQR-4001.");
+        assertThat(catalog).contains("SGQR_1003(\"SGQR-1003\", 400, \"The amount must be from 0.01 to 999,999.99\")",
+                "SGQR_6004(\"SGQR-6004\", 500,");
+        assertThat(get("/api/projects/" + p + "/error-codes").json().size()).isEqualTo(35);
         compile(p, "sgqr");
     }
 

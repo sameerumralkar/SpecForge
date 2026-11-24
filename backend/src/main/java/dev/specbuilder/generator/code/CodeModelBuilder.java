@@ -32,6 +32,8 @@ final class CodeModelBuilder {
     private final Map<String, ClientInfo> clientInfos = new TreeMap<>();
     private final Names.Registry mapperNames = new Names.Registry();
     private final Names.Registry clientMethodNames = new Names.Registry();
+    /** The first error code linked to each error-handling rule, for its error response. */
+    private final Map<ErrorHandlingConfig, ErrorCodeSnapshot> handlerCodes = new IdentityHashMap<>();
 
     // Feature flags, set while building.
     private boolean retry;
@@ -47,6 +49,31 @@ final class CodeModelBuilder {
         this.payloads = project.payloadsByName();
         this.reservedNames = reservedNames;
         this.java = new JavaExpressions(payloads);
+        for (EndpointSnapshot e : project.endpoints()) {
+            for (RuleSnapshot r : e.rules()) {
+                if (r.config() instanceof ErrorHandlingConfig h) {
+                    firstCode(r.errorCodes()).ifPresent(c -> handlerCodes.put(h, c));
+                }
+            }
+        }
+    }
+
+    private Optional<ErrorCodeSnapshot> firstCode(List<String> codes) {
+        return codes == null ? Optional.empty() : codes.stream().map(project::errorCode).flatMap(Optional::stream).findFirst();
+    }
+
+    /** The code to answer with when a check fails: its own, else the checked field's first, else the rule's first. */
+    private Optional<ErrorCodeSnapshot> checkCode(ValidateConfig.Check c, PayloadSnapshot root, RuleSnapshot r) {
+        return project.errorCode(c.errorCodeId())
+                .or(() -> {
+                    FieldSnapshot f = root == null ? null : resolve(root, c.field());
+                    return f == null ? Optional.empty() : firstCode(f.errorCodes());
+                })
+                .or(() -> firstCode(r.errorCodes()));
+    }
+
+    private static String codeLiteral(Optional<ErrorCodeSnapshot> code) {
+        return code.map(c -> Names.literal(c.code())).orElse("null");
     }
 
     List<Problem> problems() {
@@ -96,8 +123,13 @@ final class CodeModelBuilder {
                 springKafka, springJms, springAmqp, camelKafka, camelJms, camelAmqp,
                 springKafka || springJms || springAmqp,
                 springKafka || camelKafka, springJms || camelJms, springAmqp || camelAmqp);
+        Names.Registry constants = new Names.Registry();
+        List<ErrorCatalogEntry> catalog = project.errorCodes().stream()
+                .map(c -> new ErrorCatalogEntry(constants.claim(Names.constant(c.code())), c.code(), c.status(), Names.literal(c.message()),
+                        c.category().name(), c.description()))
+                .toList();
         return new CodeModel(info, features, dtos, groups, routes, entities, clients, List.copyOf(mapperMethods.values()),
-                todos.stream().distinct().toList());
+                todos.stream().distinct().toList(), catalog);
     }
 
     // ================================================================== DTOs
@@ -579,9 +611,12 @@ final class CodeModelBuilder {
             body.append(send(ctx.e().protocol(), h.deadLetterDestination(), "null", messageVar)).append("; ");
         }
         if (hasFallback && h.fallback().type() == ErrorHandlingConfig.FallbackType.ERROR_RESPONSE) {
-            int status = h.fallback().httpStatus() == null ? 503 : h.fallback().httpStatus();
-            String message = h.fallback().message() == null ? "The request could not be completed" : h.fallback().message();
-            body.append("throw new RuleViolationException(").append(status).append(", ").append(Names.literal(message)).append("); }");
+            Optional<ErrorCodeSnapshot> code = Optional.ofNullable(handlerCodes.get(h));
+            int status = h.fallback().httpStatus() != null ? h.fallback().httpStatus() : code.map(ErrorCodeSnapshot::status).orElse(503);
+            String message = h.fallback().message() != null ? h.fallback().message()
+                    : code.map(ErrorCodeSnapshot::message).orElse("The request could not be completed");
+            body.append("throw new RuleViolationException(").append(status).append(", ").append(codeLiteral(code)).append(", ")
+                    .append(Names.literal(message)).append("); }");
         } else {
             body.append("return ").append(defaultValue).append("; }");
         }
@@ -626,10 +661,14 @@ final class CodeModelBuilder {
             condition = camelPredicate(r.condition(), inType, ctx);
         }
         String sub = "direct:" + ctx.e().name() + "-" + method;
+        if (!(r.config() instanceof ValidateConfig)) {
+            summary = withCodes(summary, r);
+        }
         return switch (r.config()) {
-            case ValidateConfig v -> new Step("VALIDATE", r.name(), summary, method, signature, args, inType, inType, condition,
-                    new ValidateData(v.checks().stream().map(c -> check(c, scope)).toList(), v.failureStatus(),
-                            "bean-validator:" + ctx.e().name() + "-" + method));
+            case ValidateConfig v -> new Step("VALIDATE", r.name(), withCodes(summary, r), method, signature, args, inType, inType, condition,
+                    new ValidateData(v.checks().stream().map(c -> check(c, scope, r, v.failureStatus())).toList(),
+                            firstCode(r.errorCodes()).map(ErrorCodeSnapshot::status).orElse(v.failureStatus()),
+                            "bean-validator:" + ctx.e().name() + "-" + method, codeLiteral(firstCode(r.errorCodes()))));
             case TransformConfig t -> transform(ctx, r, t, method, signature, inType, summary, condition);
             case EnrichConfig en -> enrich(ctx, r, en, method, signature, inType, summary, condition, scope, sub);
             case ConditionalRouteConfig c -> conditional(ctx, r, c, method, signature, inType, summary, condition, scope);
@@ -640,7 +679,13 @@ final class CodeModelBuilder {
         };
     }
 
-    private Check check(ValidateConfig.Check c, JavaExpressions.Scope scope) {
+    /** Adds the step's linked error codes to its description, e.g. "… Fails with PAY-010, PAY-011." */
+    private String withCodes(String summary, RuleSnapshot r) {
+        List<String> codes = r.errorCodes() == null ? List.of() : r.errorCodes();
+        return codes.isEmpty() ? summary : summary + " Fails with " + String.join(", ", codes) + ".";
+    }
+
+    private Check check(ValidateConfig.Check c, JavaExpressions.Scope scope, RuleSnapshot r, int ruleStatus) {
         String v = c.value();
         String failsWhen = switch (c.kind()) {
             case REQUIRED -> java.anyValue(c.field(), scope, x -> x + " == null");
@@ -652,7 +697,8 @@ final class CodeModelBuilder {
             case MAX_LENGTH -> java.anyValue(c.field(), scope, x -> "Expressions.size(" + x + ") > " + v);
             case CUSTOM -> "!(" + java.condition(v, scope) + ")";
         };
-        String message = c.message() != null && !c.message().isBlank() ? c.message() : switch (c.kind()) {
+        Optional<ErrorCodeSnapshot> code = checkCode(c, scope.rootPayload(), r);
+        String message = c.message() != null && !c.message().isBlank() ? c.message() : code.isPresent() ? code.get().message() : switch (c.kind()) {
             case REQUIRED -> c.field() + " is required";
             case NOT_BLANK -> c.field() + " must not be blank";
             case PATTERN -> c.field() + " must match " + v;
@@ -662,7 +708,8 @@ final class CodeModelBuilder {
             case MAX_LENGTH -> c.field() + " allows at most " + v + " characters or items";
             case CUSTOM -> c.field() + " must satisfy " + v;
         };
-        return new Check(failsWhen, Names.literal(message), c.kind() + " " + c.field() + (v == null ? "" : " " + v));
+        return new Check(failsWhen, Names.literal(message), c.kind() + " " + c.field() + (v == null ? "" : " " + v)
+                + code.map(x -> " → " + x.code()).orElse(""), code.map(ErrorCodeSnapshot::status).orElse(ruleStatus), codeLiteral(code));
     }
 
     private Step transform(EndpointContext ctx, RuleSnapshot r, TransformConfig t, String method, String signature,
@@ -954,8 +1001,7 @@ final class CodeModelBuilder {
                         summaryOf(r, null),
                         h.retry() != null, h.retry() == null ? 0 : h.retry().maxAttempts() - 1,
                         h.retry() == null ? 0 : h.retry().backoffMs(), h.retry() == null ? 1 : h.retry().multiplier(),
-                        fallback, fb == null || fb.httpStatus() == null ? 503 : fb.httpStatus(),
-                        fb == null || fb.message() == null ? "The request could not be completed" : fb.message(), defaultType));
+                        fallback, fallbackStatus(h), fallbackMessage(h), defaultType, rawCode(h)));
                 continue;
             }
             JavaExpressions.Scope scope = new JavaExpressions.SimpleScope("current", payloads.get(type), routeCtx.paramCode());
@@ -1018,9 +1064,28 @@ final class CodeModelBuilder {
                 h.retry() == null ? 0 : h.retry().backoffMs(), h.retry() == null ? 1 : h.retry().multiplier(),
                 classes.stream().map(c -> c + ".class").collect(Collectors.joining(", ")),
                 fb == null || fb.type() == null ? null : fb.type().name(),
-                fb == null || fb.httpStatus() == null ? 503 : fb.httpStatus(),
-                fb == null || fb.message() == null ? "The request could not be completed" : fb.message(),
-                deadLetter, step.methodName() + "Input");
+                fallbackStatus(h), fallbackMessage(h),
+                deadLetter, step.methodName() + "Input", rawCode(h));
+    }
+
+    /** The fallback's own status, else its linked error code's, else 503. */
+    private int fallbackStatus(ErrorHandlingConfig h) {
+        ErrorHandlingConfig.Fallback fb = h.fallback();
+        if (fb != null && fb.httpStatus() != null) return fb.httpStatus();
+        ErrorCodeSnapshot code = handlerCodes.get(h);
+        return code == null ? 503 : code.status();
+    }
+
+    private String fallbackMessage(ErrorHandlingConfig h) {
+        ErrorHandlingConfig.Fallback fb = h.fallback();
+        if (fb != null && fb.message() != null) return fb.message();
+        ErrorCodeSnapshot code = handlerCodes.get(h);
+        return code == null ? "The request could not be completed" : code.message();
+    }
+
+    private String rawCode(ErrorHandlingConfig h) {
+        ErrorCodeSnapshot code = handlerCodes.get(h);
+        return code == null ? null : code.code();
     }
 
     /** A Camel predicate: Simple when it can express the condition, otherwise a Java lambda. */
@@ -1131,7 +1196,7 @@ final class CodeModelBuilder {
         generated.put(info.appClass(), "application");
         for (String fixed : List.of("DtoMapper", "MessagingGateway", "Expressions", "ApiExceptionHandler", "RuleViolationException",
                 "NotFoundException", "DownstreamUnavailableException", "DownstreamTimeoutException", "PersistenceFailedException",
-                "MessagingFailedException", "CamelResponses")) {
+                "MessagingFailedException", "CamelResponses", "ErrorCatalog")) {
             generated.put(fixed, "support class");
         }
         for (String dto : dtoNames) {

@@ -47,6 +47,8 @@ export interface Field {
   maximum?: number | null
   pattern?: string | null
   enumValues: string[]
+  /** Ids of the error codes this field can fail with; the first is the one checks on it use. Left out: kept as they are. */
+  errorCodeIds?: string[]
 }
 
 /** OBJECT: a reusable building block in the object inventory. STRUCTURE: a request, response, message or working body. */
@@ -125,6 +127,8 @@ export interface RuleRequest {
   condition?: string | null
   config: RuleConfig
   position?: number
+  /** Error codes the step can fail with. Left out on an update: kept as they are. */
+  errorCodeIds?: string[]
 }
 
 export interface Rule {
@@ -137,6 +141,42 @@ export interface Rule {
   condition?: string | null
   config: RuleConfig
   summary: string
+  errorCodeIds: string[]
+}
+
+export type ErrorCategory =
+  | 'VALIDATION' | 'BUSINESS' | 'NOT_FOUND' | 'CONFLICT' | 'SECURITY'
+  | 'DOWNSTREAM' | 'TIMEOUT' | 'PERSISTENCE' | 'MESSAGING' | 'TECHNICAL'
+
+export interface ErrorCodeRequest {
+  code: string
+  message: string
+  /** Left out: the category's default status. */
+  httpStatus?: number | null
+  category: ErrorCategory
+  description?: string | null
+}
+
+/** Where a code is used. CHECK links (a Validate check that picks the code) are read-only here. */
+export interface ErrorLink {
+  kind: 'FIELD' | 'RULE' | 'CHECK'
+  payloadId?: string | null
+  payloadName?: string | null
+  field?: string | null
+  endpointId?: string | null
+  endpointName?: string | null
+  ruleId?: string | null
+  ruleName?: string | null
+  ruleType?: RuleType | null
+  detail?: string | null
+}
+
+export interface ErrorCode extends ErrorCodeRequest {
+  id: string
+  projectId: string
+  /** The effective status: httpStatus, or the category's default. */
+  status: number
+  links: ErrorLink[]
 }
 
 export interface RuleWarning {
@@ -172,6 +212,7 @@ export interface Meta {
   aggregations: string[]
   errorCategories: string[]
   fallbackTypes: string[]
+  errorCodeCategories?: { category: ErrorCategory; defaultStatus: number; description: string }[]
   expressionFunctions: { name: string; example: string; description: string }[]
 }
 

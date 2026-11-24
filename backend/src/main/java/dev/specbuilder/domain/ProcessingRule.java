@@ -3,6 +3,8 @@ package dev.specbuilder.domain;
 import dev.specbuilder.domain.rule.RuleType;
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /** One step in an endpoint's ordered rule chain. The type-specific settings are stored as JSON. */
@@ -33,6 +35,11 @@ public class ProcessingRule {
     @Column(nullable = false, length = 20000)
     private String config;
 
+    /** Ids of the error codes this step can fail with, in order. */
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "error_codes", length = 2000)
+    private List<String> errorCodes = new ArrayList<>();
+
     protected ProcessingRule() {
     }
 
@@ -52,4 +59,6 @@ public class ProcessingRule {
     public void setCondition(String condition) { this.condition = condition; }
     public String getConfig() { return config; }
     public void setConfig(String config) { this.config = config; }
+    public List<UUID> getErrorCodeIds() { return ErrorCodeIds.read(errorCodes); }
+    public void setErrorCodeIds(List<UUID> ids) { this.errorCodes = ErrorCodeIds.write(ids); }
 }

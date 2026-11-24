@@ -23,6 +23,7 @@ import { ErrorSummary } from '../components/ErrorSummary'
 import { currentPayloadId } from '../lib/fieldPaths'
 import { defaultConfig, RULE_COLORS } from '../lib/rules'
 import { RuleDialog, type RuleDraft } from './rules/RuleDialog'
+import { ErrorCodeChips } from '../components/errors/ErrorCodes'
 import type { RuleFormContext } from './rules/inputs'
 
 type Editing = { mode: 'create'; draft: RuleDraft; index: number } | { mode: 'edit'; rule: Rule; draft: RuleDraft; index: number }
@@ -95,12 +96,12 @@ export function RulesEditor({ projectId, endpointId, payloads, parameters, endpo
   const openCreate = (type: RuleType) => {
     setAddMenu(null)
     setDialogKey((k) => k + 1)
-    setEditing({ mode: 'create', index: rules.length, draft: { type, name: '', condition: '', config: defaultConfig(type) } })
+    setEditing({ mode: 'create', index: rules.length, draft: { type, name: '', condition: '', config: defaultConfig(type), errorCodeIds: [] } })
   }
 
   const openEdit = (rule: Rule, index: number) => {
     setDialogKey((k) => k + 1)
-    setEditing({ mode: 'edit', rule, index, draft: { type: rule.type, name: rule.name, condition: rule.condition ?? '', config: rule.config } })
+    setEditing({ mode: 'edit', rule, index, draft: { type: rule.type, name: rule.name, condition: rule.condition ?? '', config: rule.config, errorCodeIds: rule.errorCodeIds ?? [] } })
   }
 
   const submit = async (request: RuleRequest) => {
@@ -185,6 +186,12 @@ export function RulesEditor({ projectId, endpointId, payloads, parameters, endpo
   )
 }
 
+/** Codes that a Validate rule's checks pick themselves. */
+function checkCodes(rule: Rule): string[] {
+  const checks = rule.type === 'VALIDATE' && Array.isArray(rule.config.checks) ? (rule.config.checks as { errorCodeId?: string | null }[]) : []
+  return checks.map((c) => c.errorCodeId).filter((id): id is string => !!id && !(rule.errorCodeIds ?? []).includes(id))
+}
+
 function RuleCard({ rule, index, count, warnings, onEdit, onDelete, onMove }: {
   rule: Rule
   index: number
@@ -215,6 +222,7 @@ function RuleCard({ rule, index, count, warnings, onEdit, onDelete, onMove }: {
             )}
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{rule.summary}</Typography>
+          <Box sx={{ mt: 0.5 }}><ErrorCodeChips ids={[...(rule.errorCodeIds ?? []), ...checkCodes(rule)]} /></Box>
           {warnings.map((w, i) => (
             <Typography key={i} variant="caption" color="warning.dark" sx={{ display: 'block' }}>⚠ {w.message}</Typography>
           ))}

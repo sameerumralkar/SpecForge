@@ -5,6 +5,7 @@ import dev.specbuilder.domain.PayloadRole;
 import dev.specbuilder.importexport.ProjectExport.*;
 import dev.specbuilder.repository.ProjectRepository;
 import dev.specbuilder.service.EndpointService;
+import dev.specbuilder.service.ErrorCodeService;
 import dev.specbuilder.service.PayloadService;
 import dev.specbuilder.service.ProjectService;
 import dev.specbuilder.service.RuleService;
@@ -29,9 +30,11 @@ public class ProjectImportExportService {
     private final PayloadService payloads;
     private final EndpointService endpoints;
     private final RuleService rules;
+    private final ErrorCodeService errorCodes;
 
     public ProjectImportExportService(ProjectService projects, ProjectRepository projectRepository, PayloadService payloads,
-                                      EndpointService endpoints, RuleService rules) {
+                                      EndpointService endpoints, RuleService rules, ErrorCodeService errorCodes) {
+        this.errorCodes = errorCodes;
         this.projects = projects;
         this.projectRepository = projectRepository;
         this.payloads = payloads;
@@ -47,11 +50,14 @@ public class ProjectImportExportService {
         List<PayloadView> payloadViews = payloads.list(projectId);
         Map<UUID, String> names = new HashMap<>();
         payloadViews.forEach(v -> names.put(v.id(), v.name()));
+        List<ErrorCodeView> codeViews = errorCodes.list(projectId);
+        Map<UUID, String> codeNames = new HashMap<>();
+        codeViews.forEach(c -> codeNames.put(c.id(), c.code()));
 
         List<PayloadData> payloadData = payloadViews.stream().map(v -> new PayloadData(v.name(), v.description(), v.example(),
                 v.fields().stream().map(f -> new FieldData(f.name(), f.type(), f.itemType(), f.refPayloadName(), Boolean.TRUE.equals(f.required()),
                         f.format(), f.description(), f.example(), f.minLength(), f.maxLength(), f.minimum(), f.maximum(), f.pattern(),
-                        f.enumValues())).toList(), v.role())).toList();
+                        f.enumValues(), codes(f.errorCodeIds(), codeNames))).toList(), v.role())).toList();
 
         List<EndpointData> endpointData = endpoints.list(projectId).stream()
                 .sorted(Comparator.comparing(EndpointView::name))
@@ -60,13 +66,74 @@ public class ProjectImportExportService {
                         e.responses().stream().map(r -> new ResponseData(r.statusCode(), r.description(), r.payloadName())).toList(),
                         e.security(), e.channel(), e.operation(), e.protocol(), e.messagePayloadName(),
                         rules.chain(projectId, e.id()).rules().stream()
-                                .map(r -> new RuleData(r.type(), r.name(), r.condition(), idsToNames(r.config(), names))).toList()))
+                                .map(r -> new RuleData(r.type(), r.name(), r.condition(),
+                                        codeIdsToCodes(idsToNames(r.config(), names), codeNames), codes(r.errorCodeIds(), codeNames))).toList()))
                 .toList();
 
         return new ProjectExport(ProjectExport.FORMAT, ProjectExport.VERSION,
                 new ProjectData(p.name(), p.basePackage(), p.version(), p.description(), p.defaultImplementationStyle(),
                         p.allowCircularReferences()),
-                payloadData, endpointData);
+                payloadData, endpointData,
+                codeViews.stream().map(c -> new ErrorCodeData(c.code(), c.message(), c.httpStatus(), c.category(), c.description())).toList());
+    }
+
+    private static List<String> codes(List<UUID> ids, Map<UUID, String> codeNames) {
+        return ids == null || ids.isEmpty() ? null : ids.stream().map(codeNames::get).filter(Objects::nonNull).toList();
+    }
+
+    /** Anywhere in a config: "errorCodeId": "&lt;uuid&gt;" → "errorCode": "PAY-001". */
+    private static JsonNode codeIdsToCodes(JsonNode node, Map<UUID, String> codeNames) {
+        if (node == null) return null;
+        if (node.isArray()) {
+            var out = JSON.createArrayNode();
+            node.forEach(n -> out.add(codeIdsToCodes(n, codeNames)));
+            return out;
+        }
+        if (!node.isObject()) return node;
+        ObjectNode out = JSON.createObjectNode();
+        for (Map.Entry<String, JsonNode> e : node.properties()) {
+            if (e.getKey().equals("errorCodeId")) {
+                if (e.getValue().isString()) out.put("errorCode", codeNames.get(UUID.fromString(e.getValue().asString())));
+            } else {
+                out.set(e.getKey(), codeIdsToCodes(e.getValue(), codeNames));
+            }
+        }
+        return out;
+    }
+
+    /** The reverse of {@link #codeIdsToCodes}; an unknown code is an error at its place in the file. */
+    private static JsonNode codesToCodeIds(JsonNode node, Map<String, UUID> codeIds, String at) {
+        if (node == null) return null;
+        if (node.isArray()) {
+            var out = JSON.createArrayNode();
+            for (int i = 0; i < node.size(); i++) out.add(codesToCodeIds(node.get(i), codeIds, at + "[" + i + "]"));
+            return out;
+        }
+        if (!node.isObject()) return node;
+        ObjectNode out = JSON.createObjectNode();
+        for (Map.Entry<String, JsonNode> e : node.properties()) {
+            if (e.getKey().equals("errorCode")) {
+                if (e.getValue().isString()) out.put("errorCodeId", codeRef(codeIds, e.getValue().asString(), at + ".errorCode").toString());
+            } else {
+                out.set(e.getKey(), codesToCodeIds(e.getValue(), codeIds, at + "." + e.getKey()));
+            }
+        }
+        return out;
+    }
+
+    private static List<UUID> codeRefs(Map<String, UUID> codeIds, List<String> codes, String at) {
+        if (codes == null) return List.of();
+        List<UUID> ids = new ArrayList<>();
+        for (int i = 0; i < codes.size(); i++) ids.add(codeRef(codeIds, codes.get(i), at + "[" + i + "]"));
+        return ids;
+    }
+
+    private static UUID codeRef(Map<String, UUID> codeIds, String code, String at) {
+        UUID id = code == null ? null : codeIds.get(code.toUpperCase(Locale.ROOT));
+        if (id == null) {
+            throw ValidationErrors.single(at, "refers to error code '" + code + "', which is not in the file");
+        }
+        return id;
     }
 
     /** "targetPayloadId": "&lt;uuid&gt;" → "targetPayload": "Order". */
@@ -111,6 +178,15 @@ public class ProjectImportExportService {
         UUID projectId = prefixed("project", () -> projects.create(new ProjectRequest(name, p.basePackage(), p.version(),
                 p.description(), p.defaultImplementationStyle(), Boolean.TRUE.equals(p.allowCircularReferences())))).id();
 
+        List<ErrorCodeData> codeData = data.errorCodes() == null ? List.of() : data.errorCodes();
+        Map<String, UUID> codeIds = new HashMap<>();
+        for (int i = 0; i < codeData.size(); i++) {
+            ErrorCodeData c = codeData.get(i);
+            ErrorCodeView view = prefixed("errorCodes[" + i + "]", () -> errorCodes.create(projectId,
+                    new ErrorCodeRequest(c.code(), c.message(), c.httpStatus(), c.category(), c.description())));
+            codeIds.put(view.code().toUpperCase(Locale.ROOT), view.id());
+        }
+
         // Payloads first without fields, so fields can refer to any of them; then with fields.
         List<PayloadData> payloadData = data.payloads() == null ? List.of() : data.payloads();
         Map<String, UUID> ids = new HashMap<>();
@@ -133,7 +209,7 @@ public class ProjectImportExportService {
                 FieldData f = fieldData.get(j);
                 fields.add(new FieldDto(f.name(), f.type(), f.itemType(), ref(ids, f.refPayload(), at + ".fields[" + j + "].refPayload"), null,
                         f.required(), f.format(), f.description(), f.example(), f.minLength(), f.maxLength(), f.minimum(), f.maximum(),
-                        f.pattern(), f.enumValues()));
+                        f.pattern(), f.enumValues(), codeRefs(codeIds, f.errorCodes(), at + ".fields[" + j + "].errorCodes")));
             }
             prefixed(at, () -> payloads.update(projectId, ids.get(pd.name()), new PayloadRequest(pd.name(), pd.description(), pd.example(), fields)));
         }
@@ -156,8 +232,9 @@ public class ProjectImportExportService {
             for (int j = 0; j < ruleData.size(); j++) {
                 RuleData r = ruleData.get(j);
                 String ruleAt = at + ".rules[" + j + "]";
-                JsonNode config = namesToIds(r.config(), ids, ruleAt + ".config");
-                prefixed(ruleAt, () -> rules.create(projectId, endpointId, new RuleRequest(r.type(), r.name(), r.condition(), config, null)));
+                JsonNode config = codesToCodeIds(namesToIds(r.config(), ids, ruleAt + ".config"), codeIds, ruleAt + ".config");
+                List<UUID> ruleCodes = codeRefs(codeIds, r.errorCodes(), ruleAt + ".errorCodes");
+                prefixed(ruleAt, () -> rules.create(projectId, endpointId, new RuleRequest(r.type(), r.name(), r.condition(), config, null, ruleCodes)));
             }
         }
         return projects.get(projectId);

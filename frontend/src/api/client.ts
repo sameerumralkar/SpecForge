@@ -1,6 +1,6 @@
 import type {
   Endpoint, EndpointRequest, Meta, Payload, PayloadRequest, PayloadUsage, Project, ProjectRequest,
-  CodeView, DiagramsView, GenerationDiff, ImportResult, Rule, RuleChain, RuleRequest, Snapshot, SnapshotKind, SpecsView,
+  CodeView, DiagramsView, ErrorCode, ErrorCodeRequest, ErrorLink, GenerationDiff, ImportResult, Rule, RuleChain, RuleRequest, Snapshot, SnapshotKind, SpecsView,
 } from './types'
 
 export interface FieldError {
@@ -69,6 +69,14 @@ export const api = {
   deletePayload: (projectId: string, id: string) => request<void>('DELETE', `${p(projectId)}/payloads/${id}`),
   duplicatePayload: (projectId: string, id: string) => request<Payload>('POST', `${p(projectId)}/payloads/${id}/duplicate`),
   payloadUsages: (projectId: string, id: string) => request<PayloadUsage[]>('GET', `${p(projectId)}/payloads/${id}/usages`),
+
+  errorCodes: (projectId: string) => request<ErrorCode[]>('GET', `${p(projectId)}/error-codes`),
+  createErrorCode: (projectId: string, body: ErrorCodeRequest) => request<ErrorCode>('POST', `${p(projectId)}/error-codes`, body),
+  updateErrorCode: (projectId: string, id: string, body: ErrorCodeRequest) =>
+    request<ErrorCode>('PUT', `${p(projectId)}/error-codes/${id}`, body),
+  deleteErrorCode: (projectId: string, id: string) => request<void>('DELETE', `${p(projectId)}/error-codes/${id}`),
+  setErrorCodeLinks: (projectId: string, id: string, links: ErrorLink[]) =>
+    request<ErrorCode>('PUT', `${p(projectId)}/error-codes/${id}/links`, { links }),
 
   endpoints: (projectId: string) => request<Endpoint[]>('GET', `${p(projectId)}/endpoints`),
   createEndpoint: (projectId: string, body: EndpointRequest) => request<Endpoint>('POST', `${p(projectId)}/endpoints`, body),

@@ -9,6 +9,9 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
@@ -24,8 +27,20 @@ public record ValidateConfig(
 
     public enum CheckKind { REQUIRED, NOT_BLANK, PATTERN, MIN, MAX, MIN_LENGTH, MAX_LENGTH, CUSTOM }
 
-    /** One check on a field path such as {@code customerId} or {@code items[].quantity}. */
-    public record Check(@NotBlank String field, @NotNull CheckKind kind, String value, String message) {
+    /**
+     * One check on a field path such as {@code customerId} or {@code items[].quantity}. {@code errorCodeId}
+     * picks the error code it fails with; without one it uses the field's first code, then the rule's.
+     */
+    public record Check(@NotBlank String field, @NotNull CheckKind kind, String value, String message, UUID errorCodeId) {
+
+        public Check(String field, CheckKind kind, String value, String message) {
+            this(field, kind, value, message, null);
+        }
+    }
+
+    @Override
+    public Set<UUID> errorCodeRefs() {
+        return checks.stream().map(Check::errorCodeId).filter(Objects::nonNull).collect(Collectors.toSet());
     }
 
     @Override

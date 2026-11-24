@@ -8,6 +8,7 @@ export const keys = {
   project: (id: string) => ['projects', id] as const,
   payloads: (projectId: string) => ['projects', projectId, 'payloads'] as const,
   endpoints: (projectId: string) => ['projects', projectId, 'endpoints'] as const,
+  errorCodes: (projectId: string) => ['projects', projectId, 'error-codes'] as const,
   rules: (projectId: string, endpointId: string) => ['projects', projectId, 'endpoints', endpointId, 'rules'] as const,
   specs: (projectId: string) => ['projects', projectId, 'specs'] as const,
   code: (projectId: string) => ['projects', projectId, 'code'] as const,
@@ -23,6 +24,9 @@ export const usePayloads = (projectId: string) =>
   useQuery({ queryKey: keys.payloads(projectId), queryFn: () => api.payloads(projectId) })
 export const useEndpoints = (projectId: string) =>
   useQuery({ queryKey: keys.endpoints(projectId), queryFn: () => api.endpoints(projectId) })
+/** The project's error-code inventory; not fetched without a project. */
+export const useErrorCodes = (projectId: string | undefined) =>
+  useQuery({ queryKey: keys.errorCodes(projectId ?? ''), queryFn: () => api.errorCodes(projectId!), enabled: !!projectId })
 export const useRuleChain = (projectId: string, endpointId: string) =>
   useQuery({ queryKey: keys.rules(projectId, endpointId), queryFn: () => api.ruleChain(projectId, endpointId) })
 

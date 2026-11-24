@@ -7,7 +7,7 @@ import type { Rule, RuleChain } from '../api/types'
 import { renderWithProviders } from './render'
 
 const rule = (id: string, name: string, type: Rule['type'], summary: string): Rule =>
-  ({ id, endpointId: 'e', position: 0, type, typeLabel: type, name, condition: null, config: {}, summary })
+  ({ id, endpointId: 'e', position: 0, type, typeLabel: type, name, condition: null, config: {}, summary, errorCodeIds: [] })
 
 const chain: RuleChain = {
   endpointId: 'e', endpointName: 'createOrder', effectiveImplementationStyle: 'IMPLEMENTATION_CLASS',

@@ -19,7 +19,7 @@ describe('the left menu', () => {
       [['projects', 'p'], project], [['projects', 'p', 'endpoints'], []], [['projects', 'p', 'payloads'], []],
     ])
     const menu = screen.getByRole('list', { name: 'Project menu' })
-    expect(within(menu).getAllByRole('button').map((b) => b.textContent)).toEqual(['Overview & settings', 'Object inventory', 'API spec', 'Generated code', 'Diagrams'])
+    expect(within(menu).getAllByRole('button').map((b) => b.textContent)).toEqual(['Overview & settings', 'Object inventory', 'Error codes', 'API spec', 'Generated code', 'Diagrams'])
     await user.click(within(menu).getByRole('button', { name: 'Diagrams' }))
     expect(screen.getByLabelText('Location')).toHaveTextContent('/projects/p/diagrams')
     expect(within(menu).getByRole('button', { name: 'Diagrams' })).toHaveClass('Mui-selected')

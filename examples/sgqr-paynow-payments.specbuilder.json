@@ -30,7 +30,10 @@
           "minimum": null,
           "maximum": null,
           "pattern": null,
-          "enumValues": []
+          "enumValues": [],
+          "errorCodes": [
+            "SGQR-1003"
+          ]
         },
         {
           "name": "currency",
@@ -46,7 +49,10 @@
           "minimum": null,
           "maximum": null,
           "pattern": "^[A-Z]{3}$",
-          "enumValues": []
+          "enumValues": [],
+          "errorCodes": [
+            "SGQR-1004"
+          ]
         }
       ]
     },
@@ -70,7 +76,10 @@
           "minimum": null,
           "maximum": null,
           "pattern": "^[0-9]{9,14}$",
-          "enumValues": []
+          "enumValues": [],
+          "errorCodes": [
+            "SGQR-1005"
+          ]
         },
         {
           "name": "name",
@@ -217,7 +226,10 @@
           "minimum": null,
           "maximum": null,
           "pattern": "^[A-Z0-9]{6,20}$",
-          "enumValues": []
+          "enumValues": [],
+          "errorCodes": [
+            "SGQR-1001"
+          ]
         },
         {
           "name": "qrType",
@@ -236,6 +248,9 @@
           "enumValues": [
             "PREFILLED",
             "AMOUNT_ENTRY"
+          ],
+          "errorCodes": [
+            "SGQR-1002"
           ]
         },
         {
@@ -556,7 +571,10 @@
           "minimum": null,
           "maximum": null,
           "pattern": null,
-          "enumValues": []
+          "enumValues": [],
+          "errorCodes": [
+            "SGQR-1006"
+          ]
         },
         {
           "name": "amount",
@@ -1563,13 +1581,15 @@
                 "field": "amount",
                 "kind": "CUSTOM",
                 "value": "qrType != 'PREFILLED' or not isEmpty(amount)",
-                "message": "A pre-filled QR needs an amount"
+                "message": "A pre-filled QR needs an amount",
+                "errorCode": "SGQR-2001"
               },
               {
                 "field": "amount",
                 "kind": "CUSTOM",
                 "value": "qrType != 'AMOUNT_ENTRY' or isEmpty(amount)",
-                "message": "Leave the amount empty: the payer enters it"
+                "message": "Leave the amount empty: the payer enters it",
+                "errorCode": "SGQR-2002"
               },
               {
                 "field": "amount.value",
@@ -1609,7 +1629,10 @@
               }
             ],
             "failureStatus": 400
-          }
+          },
+          "errorCodes": [
+            "SGQR-1000"
+          ]
         },
         {
           "type": "TRANSFORM",
@@ -1658,7 +1681,10 @@
             "targetField": "merchant",
             "timeoutMs": 1500,
             "mode": "ENRICH"
-          }
+          },
+          "errorCodes": [
+            "SGQR-5001"
+          ]
         },
         {
           "type": "VALIDATE",
@@ -1674,7 +1700,10 @@
               }
             ],
             "failureStatus": 422
-          }
+          },
+          "errorCodes": [
+            "SGQR-2003"
+          ]
         },
         {
           "type": "ENRICH",
@@ -1688,7 +1717,10 @@
             "targetField": "emv",
             "timeoutMs": 1000,
             "mode": "ENRICH"
-          }
+          },
+          "errorCodes": [
+            "SGQR-5006"
+          ]
         },
         {
           "type": "PERSIST",
@@ -1698,7 +1730,10 @@
             "entityName": "QrCodeEntity",
             "operation": "SAVE",
             "idField": null
-          }
+          },
+          "errorCodes": [
+            "SGQR-6001"
+          ]
         },
         {
           "type": "ERROR_HANDLING",
@@ -1721,7 +1756,10 @@
               "message": "Merchant directory unavailable"
             },
             "deadLetterDestination": null
-          }
+          },
+          "errorCodes": [
+            "SGQR-5001"
+          ]
         }
       ]
     },
@@ -1774,7 +1812,10 @@
             "entityName": "QrCodeEntity",
             "operation": "FIND_BY_ID",
             "idField": "qrId"
-          }
+          },
+          "errorCodes": [
+            "SGQR-4001"
+          ]
         }
       ]
     },
@@ -1878,7 +1919,10 @@
               }
             ],
             "failureStatus": 400
-          }
+          },
+          "errorCodes": [
+            "SGQR-1000"
+          ]
         },
         {
           "type": "TRANSFORM",
@@ -1914,7 +1958,10 @@
             "operation": "FIND_BY_ID",
             "idField": "qrId",
             "targetField": "qr"
-          }
+          },
+          "errorCodes": [
+            "SGQR-4001"
+          ]
         },
         {
           "type": "VALIDATE",
@@ -1926,25 +1973,29 @@
                 "field": "qr.status",
                 "kind": "CUSTOM",
                 "value": "qr.status == 'ACTIVE'",
-                "message": "This QR has already been paid or was cancelled"
+                "message": "This QR has already been paid or was cancelled",
+                "errorCode": "SGQR-2010"
               },
               {
                 "field": "qr.expiresAt",
                 "kind": "CUSTOM",
                 "value": "now() < qr.expiresAt",
-                "message": "This QR has expired"
+                "message": "This QR has expired",
+                "errorCode": "SGQR-2011"
               },
               {
                 "field": "qr.amount.currency",
                 "kind": "CUSTOM",
                 "value": "isEmpty(qr.amount) or qr.amount.currency == 'SGD'",
-                "message": "This QR is not a PayNow SGD QR"
+                "message": "This QR is not a PayNow SGD QR",
+                "errorCode": "SGQR-2012"
               },
               {
                 "field": "qr.merchant.status",
                 "kind": "CUSTOM",
                 "value": "qr.merchant.status == 'ACTIVE'",
-                "message": "The merchant cannot accept payments"
+                "message": "The merchant cannot accept payments",
+                "errorCode": "SGQR-2013"
               }
             ],
             "failureStatus": 422
@@ -1960,13 +2011,15 @@
                 "field": "amount",
                 "kind": "CUSTOM",
                 "value": "qr.qrType != 'PREFILLED' or isEmpty(amount) or amount.value == qr.amount.value",
-                "message": "The amount is fixed by this QR; submit it unchanged"
+                "message": "The amount is fixed by this QR; submit it unchanged",
+                "errorCode": "SGQR-2020"
               },
               {
                 "field": "amount",
                 "kind": "CUSTOM",
                 "value": "qr.qrType != 'AMOUNT_ENTRY' or not isEmpty(amount)",
-                "message": "Enter the amount to pay"
+                "message": "Enter the amount to pay",
+                "errorCode": "SGQR-2021"
               }
             ],
             "failureStatus": 422
@@ -1999,7 +2052,10 @@
             "targetField": "balance",
             "timeoutMs": 1000,
             "mode": "ENRICH"
-          }
+          },
+          "errorCodes": [
+            "SGQR-5002"
+          ]
         },
         {
           "type": "VALIDATE",
@@ -2011,19 +2067,22 @@
                 "field": "balance.status",
                 "kind": "CUSTOM",
                 "value": "balance.status == 'ACTIVE'",
-                "message": "This account cannot be debited"
+                "message": "This account cannot be debited",
+                "errorCode": "SGQR-3001"
               },
               {
                 "field": "balance.availableBalance.currency",
                 "kind": "CUSTOM",
                 "value": "balance.availableBalance.currency == 'SGD'",
-                "message": "PayNow debits SGD accounts only"
+                "message": "PayNow debits SGD accounts only",
+                "errorCode": "SGQR-3002"
               },
               {
                 "field": "balance.availableBalance.value",
                 "kind": "CUSTOM",
                 "value": "balance.availableBalance.value >= amount.value",
-                "message": "Insufficient funds"
+                "message": "Insufficient funds",
+                "errorCode": "SGQR-3003"
               }
             ],
             "failureStatus": 422
@@ -2041,7 +2100,10 @@
             "targetField": "limits",
             "timeoutMs": 800,
             "mode": "ENRICH"
-          }
+          },
+          "errorCodes": [
+            "SGQR-5004"
+          ]
         },
         {
           "type": "VALIDATE",
@@ -2053,19 +2115,22 @@
                 "field": "amount.value",
                 "kind": "CUSTOM",
                 "value": "amount.value <= limits.perTransactionLimit",
-                "message": "The amount is over your per-transaction PayNow limit"
+                "message": "The amount is over your per-transaction PayNow limit",
+                "errorCode": "SGQR-3010"
               },
               {
                 "field": "amount.value",
                 "kind": "CUSTOM",
                 "value": "amount.value + limits.usedToday <= limits.dailyLimit",
-                "message": "The amount is over what is left of today's PayNow limit"
+                "message": "The amount is over what is left of today's PayNow limit",
+                "errorCode": "SGQR-3011"
               },
               {
                 "field": "limits.transfersToday",
                 "kind": "CUSTOM",
                 "value": "limits.transfersToday < limits.maxTransfersPerDay",
-                "message": "You have reached the number of PayNow transfers allowed today"
+                "message": "You have reached the number of PayNow transfers allowed today",
+                "errorCode": "SGQR-3012"
               }
             ],
             "failureStatus": 422
@@ -2083,7 +2148,10 @@
             "targetField": "risk",
             "timeoutMs": 800,
             "mode": "ENRICH"
-          }
+          },
+          "errorCodes": [
+            "SGQR-5005"
+          ]
         },
         {
           "type": "VALIDATE",
@@ -2099,7 +2167,10 @@
               }
             ],
             "failureStatus": 422
-          }
+          },
+          "errorCodes": [
+            "SGQR-3020"
+          ]
         },
         {
           "type": "CONDITIONAL_ROUTE",
@@ -2128,7 +2199,10 @@
             "targetField": "fast",
             "timeoutMs": 5000,
             "mode": "ENRICH"
-          }
+          },
+          "errorCodes": [
+            "SGQR-5003"
+          ]
         },
         {
           "type": "PERSIST",
@@ -2138,7 +2212,10 @@
             "entityName": "PaymentEntity",
             "operation": "SAVE",
             "idField": null
-          }
+          },
+          "errorCodes": [
+            "SGQR-6002"
+          ]
         },
         {
           "type": "PUBLISH_EVENT",
@@ -2149,7 +2226,10 @@
             "destination": "sgqr.payments.initiated",
             "eventPayload": "PaymentInitiatedEvent",
             "keyField": "paymentId"
-          }
+          },
+          "errorCodes": [
+            "SGQR-6003"
+          ]
         },
         {
           "type": "TRANSFORM",
@@ -2197,7 +2277,10 @@
               "message": "Cannot check your balance right now, please try again"
             },
             "deadLetterDestination": null
-          }
+          },
+          "errorCodes": [
+            "SGQR-5002"
+          ]
         },
         {
           "type": "ERROR_HANDLING",
@@ -2220,7 +2303,10 @@
               "message": "PayNow is unavailable, please try again"
             },
             "deadLetterDestination": null
-          }
+          },
+          "errorCodes": [
+            "SGQR-5003"
+          ]
         }
       ]
     },
@@ -2273,7 +2359,10 @@
             "entityName": "PaymentEntity",
             "operation": "FIND_BY_ID",
             "idField": "paymentId"
-          }
+          },
+          "errorCodes": [
+            "SGQR-4002"
+          ]
         },
         {
           "type": "TRANSFORM",
@@ -2358,7 +2447,10 @@
             "entityName": "PaymentEntity",
             "operation": "UPDATE",
             "idField": "paymentId"
-          }
+          },
+          "errorCodes": [
+            "SGQR-6002"
+          ]
         },
         {
           "type": "PUBLISH_EVENT",
@@ -2369,7 +2461,10 @@
             "destination": "sgqr.payments.completed",
             "eventPayload": "PaymentCompletedEvent",
             "keyField": "paymentId"
-          }
+          },
+          "errorCodes": [
+            "SGQR-6003"
+          ]
         },
         {
           "type": "ERROR_HANDLING",
@@ -2387,7 +2482,10 @@
             },
             "fallback": null,
             "deadLetterDestination": "fast.settlement.results.DLT"
-          }
+          },
+          "errorCodes": [
+            "SGQR-6004"
+          ]
         }
       ]
     },
@@ -2432,6 +2530,253 @@
       "protocol": "KAFKA",
       "messagePayload": "PaymentCompletedEvent",
       "rules": []
+    }
+  ],
+  "errorCodes": [
+    {
+      "code": "SGQR-1000",
+      "message": "The request is not valid",
+      "httpStatus": null,
+      "category": "VALIDATION",
+      "description": "A field breaks its schema (size, pattern, format); the detail names the field"
+    },
+    {
+      "code": "SGQR-1001",
+      "message": "merchantId is required",
+      "httpStatus": null,
+      "category": "VALIDATION",
+      "description": null
+    },
+    {
+      "code": "SGQR-1002",
+      "message": "qrType is required: STATIC, PREFILLED or AMOUNT_ENTRY",
+      "httpStatus": null,
+      "category": "VALIDATION",
+      "description": null
+    },
+    {
+      "code": "SGQR-1003",
+      "message": "The amount must be from 0.01 to 999,999.99",
+      "httpStatus": null,
+      "category": "VALIDATION",
+      "description": null
+    },
+    {
+      "code": "SGQR-1004",
+      "message": "PayNow supports SGD only",
+      "httpStatus": null,
+      "category": "VALIDATION",
+      "description": "Money.currency is an ISO 4217 code; PayNow accepts SGD"
+    },
+    {
+      "code": "SGQR-1005",
+      "message": "Enter a valid account number of 9 to 14 digits",
+      "httpStatus": null,
+      "category": "VALIDATION",
+      "description": null
+    },
+    {
+      "code": "SGQR-1006",
+      "message": "qrId is required",
+      "httpStatus": null,
+      "category": "VALIDATION",
+      "description": null
+    },
+    {
+      "code": "SGQR-2001",
+      "message": "A pre-filled QR needs an amount",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-2002",
+      "message": "Leave the amount empty: the payer enters it",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-2003",
+      "message": "Merchant is not active",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-2010",
+      "message": "This QR has already been paid or was cancelled",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-2011",
+      "message": "This QR has expired",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-2012",
+      "message": "This QR is not a PayNow SGD QR",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-2013",
+      "message": "The merchant cannot accept payments",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-2020",
+      "message": "The amount is fixed by this QR; submit it unchanged",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-2021",
+      "message": "Enter the amount to pay",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-3001",
+      "message": "This account cannot be debited",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-3002",
+      "message": "PayNow debits SGD accounts only",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-3003",
+      "message": "Insufficient funds",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-3010",
+      "message": "The amount is over your per-transaction PayNow limit",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-3011",
+      "message": "The amount is over what is left of today's PayNow limit",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-3012",
+      "message": "You have reached the number of PayNow transfers allowed today",
+      "httpStatus": null,
+      "category": "BUSINESS",
+      "description": null
+    },
+    {
+      "code": "SGQR-3020",
+      "message": "Payment declined by fraud screening",
+      "httpStatus": 422,
+      "category": "SECURITY",
+      "description": null
+    },
+    {
+      "code": "SGQR-4001",
+      "message": "No QR code with this id",
+      "httpStatus": null,
+      "category": "NOT_FOUND",
+      "description": null
+    },
+    {
+      "code": "SGQR-4002",
+      "message": "No payment with this id",
+      "httpStatus": null,
+      "category": "NOT_FOUND",
+      "description": null
+    },
+    {
+      "code": "SGQR-5001",
+      "message": "Merchant directory unavailable",
+      "httpStatus": null,
+      "category": "DOWNSTREAM",
+      "description": null
+    },
+    {
+      "code": "SGQR-5002",
+      "message": "Cannot check your balance right now, please try again",
+      "httpStatus": null,
+      "category": "DOWNSTREAM",
+      "description": null
+    },
+    {
+      "code": "SGQR-5003",
+      "message": "PayNow is unavailable, please try again",
+      "httpStatus": null,
+      "category": "DOWNSTREAM",
+      "description": null
+    },
+    {
+      "code": "SGQR-5004",
+      "message": "PayNow limits are unavailable, please try again",
+      "httpStatus": null,
+      "category": "DOWNSTREAM",
+      "description": null
+    },
+    {
+      "code": "SGQR-5005",
+      "message": "Fraud screening is unavailable, please try again",
+      "httpStatus": null,
+      "category": "DOWNSTREAM",
+      "description": null
+    },
+    {
+      "code": "SGQR-5006",
+      "message": "The SGQR payload could not be encoded",
+      "httpStatus": null,
+      "category": "TECHNICAL",
+      "description": null
+    },
+    {
+      "code": "SGQR-6001",
+      "message": "The QR code could not be saved",
+      "httpStatus": null,
+      "category": "PERSISTENCE",
+      "description": null
+    },
+    {
+      "code": "SGQR-6002",
+      "message": "The payment could not be saved",
+      "httpStatus": null,
+      "category": "PERSISTENCE",
+      "description": null
+    },
+    {
+      "code": "SGQR-6003",
+      "message": "The payment event could not be published",
+      "httpStatus": null,
+      "category": "MESSAGING",
+      "description": null
+    },
+    {
+      "code": "SGQR-6004",
+      "message": "The settlement result could not be processed and went to the dead-letter topic",
+      "httpStatus": null,
+      "category": "MESSAGING",
+      "description": null
     }
   ]
 }

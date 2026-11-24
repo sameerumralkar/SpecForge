@@ -27,7 +27,7 @@ final class Views {
         Payload ref = f.getRefPayload();
         return new FieldDto(f.getName(), f.getType(), f.getItemType(), id(ref), name(ref), f.isRequired(),
                 f.getFormat(), f.getDescription(), f.getExample(), f.getMinLength(), f.getMaxLength(),
-                f.getMinimum(), f.getMaximum(), f.getPattern(), List.copyOf(f.getEnumValues()));
+                f.getMinimum(), f.getMaximum(), f.getPattern(), List.copyOf(f.getEnumValues()), f.getErrorCodeIds());
     }
 
     static EndpointView endpoint(Endpoint e) {

@@ -7,6 +7,7 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import { mono } from '../../theme'
 import { ExpressionInput, FieldPathInput, SelectInput, type RuleFormProps } from './inputs'
 import { get, num, pathOptions } from './configHelpers'
+import { ErrorCodePicker } from '../../components/errors/ErrorCodes'
 
 type Row = Record<string, unknown>
 
@@ -74,7 +75,14 @@ export function ValidateForm({ config, onChange, err, ctx }: RuleFormProps) {
                 <ExpressionInput label="Condition" value={s(c.value)} onChange={(value) => set({ value })} meta={ctx.meta}
                   placeholder="total > 0 or status == 'DRAFT'" error={err(`checks[${i}].value`)} />
               )}
-              <TextField label="Message (optional)" value={s(c.message)} onChange={(e) => set({ message: e.target.value })} />
+              <Stack direction="row" spacing={1}>
+                <TextField label="Message (optional)" value={s(c.message)} onChange={(e) => set({ message: e.target.value })} sx={{ flex: 3 }}
+                  helperText="Without one, the error code's message is used" />
+                <Box sx={{ flex: 2 }}>
+                  <ErrorCodePicker single label="Error code (optional)" value={s(c.errorCodeId) ? [s(c.errorCodeId)] : []}
+                    onChange={(ids) => set({ errorCodeId: ids[0] ?? null })} helperText="Overrides the field's and the rule's code" />
+                </Box>
+              </Stack>
             </Stack>
           )
         }} />

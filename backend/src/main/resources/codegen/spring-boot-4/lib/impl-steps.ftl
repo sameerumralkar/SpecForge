@@ -10,13 +10,13 @@
             var $violations = validator.validate(current);
             if (!$violations.isEmpty()) {
                 var $first = $violations.iterator().next();
-                throw new RuleViolationException(${s.data.status}, $first.getPropertyPath() + " " + $first.getMessage());
+                throw new RuleViolationException(${s.data.status}, ${s.data.code}, $first.getPropertyPath() + " " + $first.getMessage());
             }
         }
 <#list s.data.checks as c>
         // ${c.comment}
         if (${c.failsWhen}) {
-            throw new RuleViolationException(${s.data.status}, ${c.message});
+            throw new RuleViolationException(${c.status}, ${c.code}, ${c.message});
         }
 </#list>
         return current;

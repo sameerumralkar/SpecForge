@@ -31,9 +31,11 @@ public class RuleService {
     private final PayloadRepository payloads;
     private final RuleConfigCodec codec;
     private final EndpointRepository endpointRepository;
+    private final ErrorCodeService errorCodes;
 
     public RuleService(EndpointService endpointService, PayloadRepository payloads, RuleConfigCodec codec,
-                       EndpointRepository endpointRepository) {
+                       EndpointRepository endpointRepository, ErrorCodeService errorCodes) {
+        this.errorCodes = errorCodes;
         this.endpointRepository = endpointRepository;
         this.endpointService = endpointService;
         this.payloads = payloads;
@@ -127,13 +129,18 @@ public class RuleService {
                     errors.add("config", "refers to payload " + ref + ", which is not in this project");
                 }
             }
+            errorCodes.checkIds(endpoint.getProject().getId(), config.errorCodeRefs(), "config", errors);
             if (config instanceof PersistConfig p && p.entityName() != null
                     && IdentifierRules.RESERVED_TYPE_NAMES.contains(p.entityName())) {
                 errors.add("config.entityName", "'" + p.entityName() + "' clashes with a Java class the generated code uses");
             }
         }
+        errorCodes.checkIds(endpoint.getProject().getId(), request.errorCodeIds(), "errorCodeIds", errors);
         errors.throwIfAny();
 
+        if (request.errorCodeIds() != null) {
+            target.setErrorCodeIds(request.errorCodeIds());
+        }
         target.setType(request.type());
         target.setName(name);
         target.setCondition(condition);
@@ -195,7 +202,7 @@ public class RuleService {
 
     private RuleView view(ProcessingRule r, String summary) {
         return new RuleView(r.getId(), r.getEndpoint().getId(), r.getOrdinal(), r.getType(), r.getType().label(),
-                r.getName(), r.getCondition(), codec.tree(r.getConfig()), summary);
+                r.getName(), r.getCondition(), codec.tree(r.getConfig()), summary, r.getErrorCodeIds());
     }
 
     private RuleChainView chainView(Endpoint endpoint) {

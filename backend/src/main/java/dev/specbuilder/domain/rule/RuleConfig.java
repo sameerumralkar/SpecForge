@@ -24,6 +24,11 @@ public sealed interface RuleConfig
         return Set.of();
     }
 
+    /** Error codes this config picks itself (beyond the ones linked to the rule), so they can be checked and exported. */
+    default Set<UUID> errorCodeRefs() {
+        return Set.of();
+    }
+
     default void validate(ValidationErrors errors, String prefix) {
     }
 

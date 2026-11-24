@@ -76,6 +76,11 @@ public final class Names {
     }
 
     /** A Java string literal, quotes included. */
+    /** An enum constant for an error code: PAY-001 → PAY_001. */
+    public static String constant(String code) {
+        return code.toUpperCase(java.util.Locale.ROOT).replaceAll("[^A-Z0-9]+", "_");
+    }
+
     public static String literal(String s) {
         StringBuilder sb = new StringBuilder("\"");
         for (char c : s.toCharArray()) {

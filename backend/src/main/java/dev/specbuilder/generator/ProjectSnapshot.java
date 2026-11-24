@@ -20,16 +20,34 @@ public record ProjectSnapshot(
         String description,
         ImplementationStyle defaultImplementationStyle,
         List<PayloadSnapshot> payloads,
-        List<EndpointSnapshot> endpoints) {
+        List<EndpointSnapshot> endpoints,
+        List<ErrorCodeSnapshot> errorCodes) {
+
+    public ProjectSnapshot(UUID id, String name, String basePackage, String version, String description,
+                           ImplementationStyle defaultImplementationStyle, List<PayloadSnapshot> payloads, List<EndpointSnapshot> endpoints) {
+        this(id, name, basePackage, version, description, defaultImplementationStyle, payloads, endpoints, List.of());
+    }
+
+    /** An entry of the error-code inventory; {@code status} is the effective HTTP status. Sorted by code. */
+    public record ErrorCodeSnapshot(UUID id, String code, String message, int status, ErrorCategory category, String description) {
+    }
 
     public record PayloadSnapshot(UUID id, String name, String description, String example, List<FieldSnapshot> fields) {
     }
 
-    /** {@code refPayload} is the referenced payload's name, for OBJECT fields and arrays of OBJECT. */
+    /** {@code refPayload} is the referenced payload's name, for OBJECT fields and arrays of OBJECT; {@code errorCodes} are codes. */
     public record FieldSnapshot(
             String name, FieldType type, FieldType itemType, String refPayload, boolean required,
             String format, String description, String example,
-            Integer minLength, Integer maxLength, Double minimum, Double maximum, String pattern, List<String> enumValues) {
+            Integer minLength, Integer maxLength, Double minimum, Double maximum, String pattern, List<String> enumValues,
+            List<String> errorCodes) {
+
+        public FieldSnapshot(String name, FieldType type, FieldType itemType, String refPayload, boolean required,
+                             String format, String description, String example, Integer minLength, Integer maxLength,
+                             Double minimum, Double maximum, String pattern, List<String> enumValues) {
+            this(name, type, itemType, refPayload, required, format, description, example, minLength, maxLength, minimum, maximum,
+                    pattern, enumValues, List.of());
+        }
 
         /** The type of the value, or of each item for arrays. */
         public FieldType valueType() {
@@ -43,7 +61,12 @@ public record ProjectSnapshot(
     public record ResponseSnapshot(String statusCode, String description, String payload) {
     }
 
-    public record RuleSnapshot(RuleType type, String name, String condition, RuleConfig config) {
+    /** {@code errorCodes} are the codes linked to the step, e.g. PAY-001. */
+    public record RuleSnapshot(RuleType type, String name, String condition, RuleConfig config, List<String> errorCodes) {
+
+        public RuleSnapshot(RuleType type, String name, String condition, RuleConfig config) {
+            this(type, name, condition, config, List.of());
+        }
     }
 
     public record EndpointSnapshot(
@@ -60,6 +83,14 @@ public record ProjectSnapshot(
 
     public Optional<PayloadSnapshot> payload(String name) {
         return payloads.stream().filter(p -> p.name().equals(name)).findFirst();
+    }
+
+    public Optional<ErrorCodeSnapshot> errorCode(String code) {
+        return errorCodes.stream().filter(c -> c.code().equals(code)).findFirst();
+    }
+
+    public Optional<ErrorCodeSnapshot> errorCode(UUID id) {
+        return id == null ? Optional.empty() : errorCodes.stream().filter(c -> c.id().equals(id)).findFirst();
     }
 
     public Map<String, PayloadSnapshot> payloadsByName() {

@@ -15,7 +15,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(RuleViolationException.class)
     ProblemDetail ruleViolation(RuleViolationException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.valueOf(e.getStatus()), e.getMessage());
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.valueOf(e.getStatus()), e.getMessage());
+        if (e.getCode() != null) {
+            problem.setProperty("code", e.getCode());
+        }
+        return problem;
     }
 
     @ExceptionHandler(NotFoundException.class)

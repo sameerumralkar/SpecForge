@@ -7,6 +7,7 @@ import { EndpointPage } from './pages/EndpointPage'
 import { PayloadPage } from './pages/PayloadPage'
 import { OutputPage } from './pages/OutputPage'
 import { InventoryPage } from './pages/InventoryPage'
+import { ErrorCodesPage } from './pages/ErrorCodesPage'
 
 export const routes = [
   {
@@ -22,6 +23,7 @@ export const routes = [
           { path: 'endpoints/:endpointId/:tab?', element: <EndpointPage /> },
           { path: 'payloads/:payloadId', element: <PayloadPage /> },
           { path: 'inventory', element: <InventoryPage /> },
+          { path: 'errors', element: <ErrorCodesPage /> },
           { path: 'spec', element: <OutputPage view="spec" /> },
           { path: 'code', element: <OutputPage view="code" /> },
           { path: 'diagrams', element: <OutputPage view="diagrams" /> },

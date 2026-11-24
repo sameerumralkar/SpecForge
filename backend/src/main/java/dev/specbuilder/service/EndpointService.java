@@ -117,6 +117,7 @@ public class EndpointService {
             r.setName(rule.getName());
             r.setCondition(rule.getCondition());
             r.setConfig(rule.getConfig());
+            r.setErrorCodeIds(rule.getErrorCodeIds());
             copy.getRules().add(r);
         }
         copy.renumberRules();

@@ -109,6 +109,7 @@ public class AsyncApiGenerator implements Generator {
         }
         components.put("schemas", componentSchemas);
         doc.put("components", components);
+        put(doc, "x-error-codes", project.errorCodes().stream().map(OpenApiGenerator::errorCode).toList());
 
         return new GenerationResult(List.of(
                 new GeneratedFile("asyncapi.yaml", SpecWriter.yaml(doc), "application/yaml"),

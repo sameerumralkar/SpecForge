@@ -24,6 +24,9 @@
 </#if>
 <#if (g.fallback!"") == "ERROR_RESPONSE">
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(${g.status}))
+<#if g.errorCode??>
+                .setHeader("X-Error-Code", constant("${g.errorCode}"))
+</#if>
                 .setBody(constant("${j.doc(g.message)?j_string}"))
                 .stop()
 <#elseif (g.fallback!"") == "DEFAULT_RESPONSE">
@@ -54,7 +57,7 @@
                 ${body(s.inType)}
 <#list s.data.checks as c>
                 if (${c.failsWhen}) { // ${c.comment}
-                    throw new RuleViolationException(${s.data.status}, ${c.message});
+                    throw new RuleViolationException(${c.status}, ${c.code}, ${c.message});
                 }
 </#list>
             })

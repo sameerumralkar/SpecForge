@@ -60,7 +60,8 @@ public class ${item.className} extends RouteBuilder {
             .backOffMultiplier(${o.multiplier?c})
             .useExponentialBackOff()</#if><#if (o.fallback!"") == "ERROR_RESPONSE">
             .handled(true)
-            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(${o.status}))
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(${o.status}))<#if o.errorCode??>
+            .setHeader("X-Error-Code", constant("${o.errorCode}"))</#if>
             .setBody(constant("${j.doc(o.message)?j_string}"))<#elseif (o.fallback!"") == "DEFAULT_RESPONSE">
             .handled(true)
             .process(exchange -> exchange.getMessage().setBody(<#if o.defaultType??>new ${o.defaultType}()<#else>null</#if>))</#if>;

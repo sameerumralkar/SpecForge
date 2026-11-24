@@ -49,6 +49,7 @@ files:
       - { name: PersistenceFailedException, doc: "Saving or loading data failed." }
       - { name: MessagingFailedException, doc: "Publishing a message failed." }
     output: "src/main/java/${project.packagePath}/error/${item.name}.java"
+  - { template: java/error/ErrorCatalog.java.ftl, when: "model.errorCodes?has_content", output: "src/main/java/${project.packagePath}/error/ErrorCatalog.java" }
   - { template: java/error/ApiExceptionHandler.java.ftl, output: "src/main/java/${project.packagePath}/error/ApiExceptionHandler.java" }
   - { template: java/test/ExpressionsTest.java.ftl, output: "src/test/java/${project.packagePath}/support/ExpressionsTest.java" }
   - { template: java/test/ServiceImplTest.java.ftl, each: groups, when: item.hasService(), output: "src/test/java/${project.packagePath}/service/${item.testClass}.java" }

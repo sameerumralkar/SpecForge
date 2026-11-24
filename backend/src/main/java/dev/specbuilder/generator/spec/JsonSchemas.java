@@ -72,6 +72,9 @@ final class JsonSchemas {
         if (f.example() != null && !f.example().isBlank()) {
             schema.put("examples", List.of(example(f, pointer)));
         }
+        if (f.errorCodes() != null && !f.errorCodes().isEmpty()) {
+            schema.put("x-error-codes", f.errorCodes());
+        }
         return schema;
     }
 

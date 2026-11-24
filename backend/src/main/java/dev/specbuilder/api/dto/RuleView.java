@@ -3,6 +3,7 @@ package dev.specbuilder.api.dto;
 import dev.specbuilder.domain.rule.RuleType;
 import tools.jackson.databind.JsonNode;
 
+import java.util.List;
 import java.util.UUID;
 
 public record RuleView(
@@ -14,5 +15,6 @@ public record RuleView(
         String name,
         String condition,
         JsonNode config,
-        String summary) {
+        String summary,
+        List<UUID> errorCodeIds) {
 }

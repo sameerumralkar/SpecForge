@@ -7,6 +7,9 @@ import org.springframework.http.ResponseEntity;
 /** Turns the outcome of a route into an HTTP response. */
 public final class CamelResponses {
 
+    /** Set by error responses that carry an error code from the inventory. */
+    public static final String ERROR_CODE_HEADER = "X-Error-Code";
+
     private CamelResponses() {
     }
 
@@ -17,7 +20,8 @@ public final class CamelResponses {
         }
         Integer code = result.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
         if (code != null && code >= 400) {
-            throw new RuleViolationException(code, result.getMessage().getBody(String.class));
+            throw new RuleViolationException(code, result.getMessage().getHeader(ERROR_CODE_HEADER, String.class),
+                    result.getMessage().getBody(String.class));
         }
         if (type == Void.class) {
             return ResponseEntity.status(status).build();

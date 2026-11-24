@@ -32,9 +32,11 @@ public class PayloadService {
     private final EndpointRepository endpoints;
     private final ProcessingRuleRepository rules;
     private final RuleConfigCodec codec;
+    private final ErrorCodeService errorCodes;
 
     public PayloadService(ProjectService projectService, PayloadRepository payloads, EndpointRepository endpoints,
-                          ProcessingRuleRepository rules, RuleConfigCodec codec) {
+                          ProcessingRuleRepository rules, RuleConfigCodec codec, ErrorCodeService errorCodes) {
+        this.errorCodes = errorCodes;
         this.projectService = projectService;
         this.payloads = payloads;
         this.endpoints = endpoints;
@@ -182,6 +184,8 @@ public class PayloadService {
         }
 
         List<FieldDto> requested = request.fields() == null ? List.of() : request.fields();
+        Map<String, PayloadField> before = new HashMap<>();
+        target.getFields().forEach(f -> before.put(f.getName(), f));
         List<PayloadField> fields = new ArrayList<>();
         Set<String> seen = new HashSet<>();
         for (int i = 0; i < requested.size(); i++) {
@@ -192,6 +196,13 @@ public class PayloadService {
                 continue;
             }
             PayloadField field = field(dto, at, byId, errors);
+            if (dto.errorCodeIds() == null) {
+                PayloadField old = before.get(field.getName());
+                field.setErrorCodeIds(old == null ? List.of() : old.getErrorCodeIds());
+            } else {
+                errorCodes.checkIds(project.getId(), dto.errorCodeIds(), at + "errorCodeIds", errors);
+                field.setErrorCodeIds(dto.errorCodeIds());
+            }
             if (field.getName() != null && !seen.add(field.getName().toLowerCase(Locale.ROOT))) {
                 errors.add(at + "name", "another field already has this name (names must differ in more than letter case)");
             }

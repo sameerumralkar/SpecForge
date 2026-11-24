@@ -6,12 +6,19 @@ import { ErrorSummary } from '../../components/ErrorSummary'
 import { cleanConfig, defaultConfig } from '../../lib/rules'
 import { RULE_FORMS } from './ruleForms'
 import { ExpressionInput, SelectInput, type RuleFormContext } from './inputs'
+import { ErrorCodePicker } from '../../components/errors/ErrorCodes'
+
+const ERROR_CODE_HELP: Partial<Record<RuleType, string>> = {
+  VALIDATE: 'Used by checks whose field has no code, and when the payload breaks its schema',
+  ERROR_HANDLING: 'The error response answers with the first code (its status and message, unless the fallback sets them)',
+}
 
 export interface RuleDraft {
   type: RuleType
   name: string
   condition: string
   config: RuleConfig
+  errorCodeIds?: string[]
 }
 
 /** Create or edit one rule: shared settings on top, the form for its type below. */
@@ -38,6 +45,7 @@ export function RuleDialog({ open, title, initial, ctx, onSubmit, onClose }: {
         name: draft.name,
         condition: draft.condition.trim() || null,
         config: cleanConfig(draft.config) as RuleConfig,
+        errorCodeIds: draft.errorCodeIds,
       })
     } catch (e) {
       setError(e)
@@ -66,6 +74,10 @@ export function RuleDialog({ open, title, initial, ctx, onSubmit, onClose }: {
           )}
           <Divider />
           <Form config={draft.config} onChange={(config) => setDraft({ ...draft, config })} err={err} ctx={ctx} />
+          <Divider />
+          <ErrorCodePicker value={draft.errorCodeIds ?? []} onChange={(errorCodeIds) => setDraft({ ...draft, errorCodeIds })}
+            label="Error codes of this step" error={apiError?.errorFor('errorCodeIds')}
+            helperText={ERROR_CODE_HELP[draft.type] ?? 'Listed in the generated code and the specs'} />
         </Stack>
       </DialogContent>
       <DialogActions>

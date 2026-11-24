@@ -4,9 +4,11 @@ import dev.specbuilder.domain.ParameterLocation;
 import dev.specbuilder.domain.SecurityScheme;
 import dev.specbuilder.generator.*;
 import dev.specbuilder.generator.ProjectSnapshot.*;
+import dev.specbuilder.domain.rule.ValidateConfig;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static dev.specbuilder.generator.spec.Tree.obj;
 import static dev.specbuilder.generator.spec.Tree.put;
@@ -58,7 +60,7 @@ public class OpenApiGenerator implements Generator {
         for (EndpointSnapshot e : rest) {
             @SuppressWarnings("unchecked")
             Map<String, Object> item = (Map<String, Object>) paths.computeIfAbsent(e.path(), k -> obj());
-            item.put(e.httpMethod().name().toLowerCase(Locale.ROOT), operation(e));
+            item.put(e.httpMethod().name().toLowerCase(Locale.ROOT), operation(e, project));
         }
         doc.put("paths", paths);
 
@@ -80,6 +82,7 @@ public class OpenApiGenerator implements Generator {
         used.forEach(s -> securitySchemes.put(schemeName(s), schemeDefinition(s)));
         put(components, "securitySchemes", securitySchemes);
         put(doc, "components", components);
+        put(doc, "x-error-codes", project.errorCodes().stream().map(OpenApiGenerator::errorCode).toList());
 
         if (used.contains(SecurityScheme.OAUTH2)) {
             problems.add(Problem.info(ID, "The OAuth2 scheme uses a placeholder token URL; replace it with your authorization server's."));
@@ -89,7 +92,7 @@ public class OpenApiGenerator implements Generator {
                 new GeneratedFile("openapi.json", SpecWriter.json(doc), "application/json")), problems);
     }
 
-    private static Map<String, Object> operation(EndpointSnapshot e) {
+    private static Map<String, Object> operation(EndpointSnapshot e, ProjectSnapshot project) {
         Map<String, Object> op = obj();
         put(op, "tags", e.tags());
         put(op, "summary", e.summary());
@@ -124,9 +127,44 @@ public class OpenApiGenerator implements Generator {
                     }
                     responses.put(r.statusCode(), response);
                 });
-        op.put("responses", responses);
+        List<ErrorCodeSnapshot> codes = errorCodes(e, project);
+        Map<String, Object> sorted = responses;
+        op.put("responses", sorted);
+        put(op, "x-error-codes", codes.stream().map(OpenApiGenerator::errorCode).toList());
         put(op, "security", e.security().stream().map(s -> Map.<String, Object>of(schemeName(s), List.of())).toList());
         return op;
+    }
+
+    /**
+     * The codes an operation can answer with: those linked to its rules and checks, then those on the fields of its
+     * request body (and the objects inside it), each once, in that order.
+     */
+    static List<ErrorCodeSnapshot> errorCodes(EndpointSnapshot e, ProjectSnapshot project) {
+        Set<String> codes = new LinkedHashSet<>();
+        for (RuleSnapshot r : e.rules()) {
+            if (r.errorCodes() != null) codes.addAll(r.errorCodes());
+            if (r.config() instanceof ValidateConfig v) {
+                v.checks().forEach(c -> project.errorCode(c.errorCodeId()).ifPresent(x -> codes.add(x.code())));
+            }
+        }
+        String body = e.isRest() ? e.requestPayload() : e.messagePayload();
+        if (body != null) {
+            Map<String, PayloadSnapshot> byName = project.payloadsByName();
+            for (String name : project.reachableFrom(List.of(body))) {
+                byName.get(name).fields().forEach(f -> { if (f.errorCodes() != null) codes.addAll(f.errorCodes()); });
+            }
+        }
+        return codes.stream().map(project::errorCode).flatMap(Optional::stream).toList();
+    }
+
+    static Map<String, Object> errorCode(ErrorCodeSnapshot c) {
+        Map<String, Object> m = obj();
+        m.put("code", c.code());
+        m.put("status", c.status());
+        m.put("category", c.category().name());
+        m.put("message", c.message());
+        put(m, "description", c.description());
+        return m;
     }
 
     private static Map<String, Object> jsonContent(String payload) {

@@ -66,6 +66,9 @@ public final class SpecImporter {
     private final Map<String, PayloadBuilder> payloads = new LinkedHashMap<>();
     private final List<EndpointData> endpoints = new ArrayList<>();
     private final Set<String> endpointNames = new HashSet<>();
+    /** The x-error-codes catalogs of the documents, by code, and the codes fields refer to. */
+    private final Map<String, ErrorCodeData> errorCatalog = new LinkedHashMap<>();
+    private final Set<String> referencedCodes = new LinkedHashSet<>();
     private String title;
     private String version;
     private String description;
@@ -112,6 +115,7 @@ public final class SpecImporter {
             description = text(info, "description");
         }
         Doc doc = new Doc(index, root, label);
+        errorCatalog(root.path("x-error-codes"));
         if (openapi != null && openapi.startsWith("3.")) {
             components(doc);
             openApi(doc);
@@ -147,10 +151,34 @@ public final class SpecImporter {
                 .sorted(Comparator.comparing(b -> b.name))
                 .map(b -> new PayloadData(b.name, b.description, b.example, b.fields)).toList();
         List<EndpointData> endpointData = endpoints.stream().sorted(Comparator.comparing(EndpointData::name)).toList();
+        for (String code : referencedCodes) {
+            if (!errorCatalog.containsKey(code)) {
+                warn("error code " + code + " is used but not described in x-error-codes; imported with the code as its message");
+                errorCatalog.put(code, new ErrorCodeData(code, code, null, ErrorCategory.VALIDATION, null));
+            }
+        }
         ProjectExport export = new ProjectExport(ProjectExport.FORMAT, ProjectExport.VERSION,
                 new ProjectData(projectName, pkg, projectVersion, description, ImplementationStyle.IMPLEMENTATION_CLASS, cycles),
-                payloadData, endpointData);
+                payloadData, endpointData, List.copyOf(errorCatalog.values()));
         return new Result(export, List.copyOf(warnings));
+    }
+
+    /** Reads a SpecForge x-error-codes list: [{code, status, category, message, description}]. */
+    private void errorCatalog(JsonNode list) {
+        for (JsonNode c : list) {
+            String code = text(c, "code");
+            if (code == null || errorCatalog.containsKey(code)) continue;
+            ErrorCategory category;
+            try {
+                category = ErrorCategory.valueOf(Objects.requireNonNullElse(text(c, "category"), "VALIDATION"));
+            } catch (IllegalArgumentException e) {
+                category = ErrorCategory.VALIDATION;
+            }
+            Integer status = intOrNull(c, "status");
+            String message = text(c, "message");
+            errorCatalog.put(code, new ErrorCodeData(code, message == null ? code : message,
+                    status == null || status == category.defaultStatus() ? null : status, category, text(c, "description")));
+        }
     }
 
     private static String derivePackage(String name) {
@@ -277,7 +305,20 @@ public final class SpecImporter {
         schema.path("required").forEach(r -> required.add(r.asString()));
     }
 
+    /** A field, with the error codes SpecForge lists on its schema as x-error-codes. */
     private FieldData field(Doc d, String name, JsonNode raw, String owner, boolean required) {
+        FieldData f = fieldShape(d, name, raw, owner, required);
+        List<String> codes = new ArrayList<>();
+        raw.path("x-error-codes").forEach(c -> { if (c.isString() && !c.asString().isBlank()) codes.add(c.asString().strip()); });
+        if (codes.isEmpty()) {
+            return f;
+        }
+        codes.forEach(referencedCodes::add);
+        return new FieldData(f.name(), f.type(), f.itemType(), f.refPayload(), f.required(), f.format(), f.description(), f.example(),
+                f.minLength(), f.maxLength(), f.minimum(), f.maximum(), f.pattern(), f.enumValues(), List.copyOf(new LinkedHashSet<>(codes)));
+    }
+
+    private FieldData fieldShape(Doc d, String name, JsonNode raw, String owner, boolean required) {
         String desc = text(raw, "description");
         JsonNode schema = raw;
         // allOf with a single $ref is a common way to add a description to a reference.

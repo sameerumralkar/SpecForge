@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Embeddable
 public class PayloadField {
@@ -54,6 +55,11 @@ public class PayloadField {
     @Column(name = "enum_values", length = 4000)
     private List<String> enumValues = new ArrayList<>();
 
+    /** Ids of the error codes this field can fail with, in order; the first is the one checks use. */
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "error_codes", length = 2000)
+    private List<String> errorCodes = new ArrayList<>();
+
     public PayloadField() {
     }
 
@@ -73,6 +79,7 @@ public class PayloadField {
         c.maximum = maximum;
         c.pattern = pattern;
         c.enumValues = new ArrayList<>(enumValues == null ? List.of() : enumValues);
+        c.errorCodes = new ArrayList<>(errorCodes == null ? List.of() : errorCodes);
         return c;
     }
 
@@ -104,6 +111,9 @@ public class PayloadField {
     public void setPattern(String pattern) { this.pattern = pattern; }
     public List<String> getEnumValues() { return enumValues == null ? List.of() : enumValues; }
     public void setEnumValues(List<String> enumValues) { this.enumValues = new ArrayList<>(enumValues == null ? List.of() : enumValues); }
+
+    public List<UUID> getErrorCodeIds() { return ErrorCodeIds.read(errorCodes); }
+    public void setErrorCodeIds(List<UUID> ids) { this.errorCodes = ErrorCodeIds.write(ids); }
 
     /** The type a value of this field has once you step into array items with {@code name[]}. */
     public FieldType elementType() {

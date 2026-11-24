@@ -12,6 +12,7 @@ import type { Field, FieldType, Payload, PayloadRequest, PayloadRole } from '../
 import { ObjectDropZone } from '../components/inventory/ObjectDnd'
 import { payloadOptions } from '../components/inventory/PayloadOptions'
 import { objectField } from '../lib/inventory'
+import { ErrorCodeChips, ErrorCodePicker } from '../components/errors/ErrorCodes'
 import { errorText } from '../lib/errors'
 import { mono } from '../theme'
 import { emptyField, FIELD_TYPES } from '../lib/mappers'
@@ -28,7 +29,7 @@ const needsRef = (f: Field) => f.type === 'OBJECT' || (f.type === 'ARRAY' && f.i
 /** The number of constraints set on a field, shown on its "constraints" button. */
 const constraintCount = (f: Field) =>
   [f.format, f.description, f.example, f.minLength, f.maxLength, f.minimum, f.maximum, f.pattern]
-    .filter((v) => v !== null && v !== undefined && v !== '').length + (f.enumValues.length ? 1 : 0)
+    .filter((v) => v !== null && v !== undefined && v !== '').length + (f.enumValues.length ? 1 : 0) + (f.errorCodeIds?.length ? 1 : 0)
 
 export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
   value: PayloadRequest
@@ -119,6 +120,7 @@ export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
                       <TextField value={f.name} placeholder="fieldName"
                         onChange={(e) => setField(i, { name: e.target.value })}
                         error={!!err(at + 'name')} helperText={err(at + 'name')} slotProps={{ htmlInput: { 'aria-label': `Field ${i + 1} name`, style: { fontFamily: mono.fontFamily } } }} />
+                      {!open.has(i) && <Box sx={{ mt: 0.5 }}><ErrorCodeChips ids={f.errorCodeIds} /></Box>}
                     </TableCell>
                     <TableCell>
                       <TextField select value={f.type ?? ''} slotProps={{ htmlInput: { 'aria-label': `Field ${i + 1} type` } }} onChange={(e) => changeType(i, e.target.value as FieldType)}
@@ -190,7 +192,7 @@ export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
 /** Server errors on a field's constraint inputs, so the details open when one of them is wrong. */
 function fieldErrorsOf(error: unknown, prefix: string): Record<string, string> {
   const out: Record<string, string> = {}
-  for (const k of ['format', 'description', 'example', 'minLength', 'maxLength', 'minimum', 'maximum', 'pattern', 'enumValues']) {
+  for (const k of ['format', 'description', 'example', 'minLength', 'maxLength', 'minimum', 'maximum', 'pattern', 'enumValues', 'errorCodeIds']) {
     const e = errorText(error, prefix + k)
     if (e) out[k] = e
   }
@@ -241,6 +243,8 @@ function FieldConstraints({ field: f, onChange, err }: {
               error={!!err('enumValues')} helperText={err('enumValues') ?? 'Leave empty to allow any text'} />
           )} />
       )}
+      <ErrorCodePicker value={f.errorCodeIds ?? []} onChange={(errorCodeIds) => onChange({ errorCodeIds })} error={err('errorCodeIds')}
+        helperText="What callers get when this field is wrong; checks on the field use the first code" />
     </Stack>
   )
 }

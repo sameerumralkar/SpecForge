@@ -17,7 +17,12 @@ public record CodeModel(
         List<Entity> entities,
         List<Client> clients,
         List<MapperMethod> mapperMethods,
-        List<String> todos) {
+        List<String> todos,
+        List<ErrorCatalogEntry> errorCodes) {
+
+    /** One code of the error-code inventory, for the generated ErrorCode catalog. {@code message} is a Java literal. */
+    public record ErrorCatalogEntry(String constant, String code, int status, String message, String category, String description) {
+    }
 
     public record Project(String name, String description, String groupId, String artifactId, String version,
                           String basePackage, String packagePath, String appClass) {
@@ -121,17 +126,19 @@ public record CodeModel(
      */
     public record Guard(String uri, String routeId, String summary, boolean retry, int maxRedeliveries, long delayMs,
                         double multiplier, String classes, String fallback, int status, String message,
-                        String deadLetterUri, String inputProperty) {
+                        String deadLetterUri, String inputProperty, String errorCode) {
 
         public boolean catches() {
             return fallback != null || deadLetterUri != null;
         }
     }
 
-    public record Check(String failsWhen, String message, String comment) {
+    /** {@code code} is a Java literal: the error code's string, or null. */
+    public record Check(String failsWhen, String message, String comment, int status, String code) {
     }
 
-    public record ValidateData(List<Check> checks, int status, String beanValidatorUri) {
+    /** {@code status} and {@code code} (a Java literal or null) are for failures of the bean-validation annotations. */
+    public record ValidateData(List<Check> checks, int status, String beanValidatorUri, String code) {
     }
 
     public record TransformData(String mapperMethod) {
@@ -185,7 +192,7 @@ public record CodeModel(
 
     /** An onException clause. {@code fallback} is ERROR_RESPONSE, DEFAULT_RESPONSE or null. */
     public record OnException(String classes, String summary, boolean retry, int maxRedeliveries, long delayMs,
-                              double multiplier, String fallback, int status, String message, String defaultType) {
+                              double multiplier, String fallback, int status, String message, String defaultType, String errorCode) {
     }
 
     // ---------------------------------------------------------------- persistence, clients, mapping

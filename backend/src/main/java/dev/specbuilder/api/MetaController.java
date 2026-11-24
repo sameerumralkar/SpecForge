@@ -17,6 +17,9 @@ public class MetaController {
     public record RuleTypeInfo(RuleType type, String label) {
     }
 
+    public record ErrorCategoryInfo(dev.specbuilder.domain.ErrorCategory category, int defaultStatus, String description) {
+    }
+
     public record FunctionInfo(String name, String example, String description) {
     }
 
@@ -39,6 +42,8 @@ public class MetaController {
         meta.put("aggregations", SplitAggregateConfig.Aggregation.values());
         meta.put("errorCategories", ErrorHandlingConfig.ErrorCategory.values());
         meta.put("fallbackTypes", ErrorHandlingConfig.FallbackType.values());
+        meta.put("errorCodeCategories", Arrays.stream(dev.specbuilder.domain.ErrorCategory.values())
+                .map(c -> new ErrorCategoryInfo(c, c.defaultStatus(), c.description())).toList());
         meta.put("expressionFunctions", Arrays.stream(Functions.values())
                 .map(f -> new FunctionInfo(f.fnName(), f.example(), f.description())).toList());
         return meta;

@@ -23,8 +23,8 @@ cd frontend && npm install && npm run dev  # UI on http://localhost:5173 (calls 
 Tests:
 
 ```bash
-cd backend && mvn test        # 138 tests; see the notes below
-cd frontend && npm test       # 52 component and unit tests (Vitest + Testing Library)
+cd backend && mvn test        # 142 tests; see the notes below
+cd frontend && npm test       # 55 component and unit tests (Vitest + Testing Library)
 ```
 
 - The PostgreSQL test needs Docker, and is skipped without it.
@@ -59,7 +59,8 @@ Generated projects will also target Spring Boot 4.x with Apache Camel 4.
 | **Payload** | a reusable schema: name, description, JSON example, ordered fields, and a role: `OBJECT` (a building block in the object inventory, e.g. Money, Address) or `STRUCTURE` (a request, response, message or working body) |
 | **Payload field** | name, type (`STRING INTEGER LONG NUMBER DECIMAL BOOLEAN DATE DATE_TIME UUID OBJECT ARRAY`), item type for arrays, referenced payload for objects, required, format, min/max length, min/max value, pattern, allowed values |
 | **Endpoint** | `REST`: method, path, path/query/header parameters, request payload, responses per status, security. `ASYNC`: channel, `SEND`/`RECEIVE`, protocol (`KAFKA JMS AMQP`), message payload, headers. Both: name (operation id), summary, tags, implementation style (or the project default) |
-| **Processing rule** | ordered per endpoint: type, name, optional condition, type-specific config (stored as JSON) |
+| **Processing rule** | ordered per endpoint: type, name, optional condition, type-specific config (stored as JSON), and the error codes the step can fail with |
+| **Error code** | the error-code inventory: a code (e.g. `PAY-001`), the message callers see, a category (`VALIDATION BUSINESS NOT_FOUND CONFLICT SECURITY DOWNSTREAM TIMEOUT PERSISTENCE MESSAGING TECHNICAL`), an HTTP status (or the category's default: 400, 422, 404, 409, 403, 503, 504, 500…), a description. Payload fields and rules list the codes they can fail with, by id |
 
 References between payloads, endpoints and rules use ids, so renaming a payload updates every place that
 shows it, with nothing to rewrite.
@@ -84,7 +85,7 @@ can also refer to an endpoint parameter, e.g. `orderId` on `GET /orders/{orderId
 
 - **Sidebar:** the menu below, endpoints grouped by their first tag (REST) or by channel
   (async), and payloads split into inventory objects and structures. Each item's ⋮ menu has Duplicate and Delete.
-- **Left menu:** **Overview & settings**, **Object inventory**, **API spec** (OpenAPI/AsyncAPI with
+- **Left menu:** **Overview & settings**, **Object inventory**, **Error codes**, **API spec** (OpenAPI/AsyncAPI with
   validation), **Generated code** and **Diagrams** each open a full page; below them are the endpoints and payloads. The **Preview** button
   in the top bar shows the same outputs beside the editor.
 - **Endpoint editor:** five tabs.
@@ -102,6 +103,16 @@ can also refer to an endpoint parameter, e.g. `orderId` on `GET /orders/{orderId
 - **Object inventory:** a page listing the inventory objects with their fields and where each is used,
   with New object, Edit, Duplicate, Delete (refused, with the list of uses, while anything uses it) and
   moving payloads between the inventory and the structures.
+- **Error codes:** the error-code inventory, with search and a filter per category. Each code shows its
+  message, HTTP status and where it is linked. Create, edit and delete codes there (deleting unlinks the
+  code everywhere). **Link** opens a dialog that links a code to payload fields (payload → field) and
+  processing rules (endpoint → rule); a new code opens it straight away. You can also link from the other
+  side:
+  - a field's constraints panel has an **Error codes** picker, and the field row shows its codes;
+  - the rule dialog has **Error codes of this step**, and each Validate check has its own optional
+    **Error code**. Rule cards show their codes.
+
+  Every picker has **New error code…** to create one on the spot.
 - **Drag and drop:** the payload editor and an endpoint's Request / Response tab have an inventory panel.
   Drag an object from it onto:
   - the **fields** of a payload, to add a field of that type (named after the object, e.g. `money`);
@@ -129,6 +140,13 @@ Payloads become JSON Schema using only keywords both specs share. That covers `t
 `minLength`/`maxLength`, `minItems`/`maxItems` (from a list's length limits), `minimum`/`maximum`, `pattern`,
 `enum`, `description`, `examples` (typed per field, plus the payload's JSON example), and `$ref` for nested
 payloads.
+
+Error codes appear as `x-error-codes` extensions:
+
+- at the top of both documents: the catalog (code, status, category, message, description);
+- on each operation: the codes it can answer with, from its rules, its checks and the fields of its
+  request body (objects included);
+- on schema properties: the codes linked to that field.
 
 Every document is checked three ways, and problems are listed under the preview:
 1. Against the **official JSON Schema** of the spec, bundled in `backend/src/main/resources/schemas/`:
@@ -165,9 +183,10 @@ checks this on every build. It contains:
 - `client`: a `RestClient` per service that ENRICH rules call.
 - `mapper`: MapStruct mappers for the TRANSFORM rules, and for converting to events and responses.
 - `support`: `Expressions`, the runtime for the shared expression syntax.
-- `error`: the exceptions and an error handler that turns them into problem responses.
+- `error`: the exceptions and an error handler that turns them into problem responses, and `ErrorCatalog`,
+  an enum of the project's error codes (code, status, message), when it has any.
 
-It also includes `application.yml`, a README with a to-do list, a test skeleton and the Maven wrapper.
+It also includes `application.yml`, a README with a to-do list and a test skeleton.
 
 How each rule type is generated:
 
@@ -181,6 +200,17 @@ How each rule type is generated:
 | PUBLISH_EVENT | `KafkaTemplate` / `JmsTemplate` / `RabbitTemplate` | `.to("kafka:…")` / `jms:` / `spring-rabbitmq:` |
 | SPLIT_AGGREGATE | stream over the items | `.split(…)` with an aggregation strategy |
 | ERROR_HANDLING | Resilience4j retry + fallback around the step or chain | aimed at a step: the step runs in its own sub-route with a retrying error handler, called inside `doTry/doCatch` for the fallback; for the whole route: `onException(…)` with redelivery, `deadLetterChannel` |
+
+**Error codes** in the generated code:
+
+- A failed Validate check throws `RuleViolationException(status, code, message)`. The code is the
+  check's own, else the first code of the field it checks, else the rule's first code. The status is the
+  code's, else the rule's failure status. The message is the check's, else the code's.
+- A Validate rule's first code also covers payloads that break their Bean Validation constraints.
+- An Error handling fallback answers with its rule's first code. Its own status and message win if set.
+  In a Camel route the code travels in the `X-Error-Code` header.
+- The problem response carries the code: `{"status": 422, "detail": "Insufficient funds", "code": "SGQR-3003"}`.
+- Other rules list their codes in their Javadoc ("Fails with SGQR-5002.").
 
 Conditions become null-safe Java everywhere. In routes they become Camel Simple when Simple can express
 them (field paths, parameters, comparisons, an and-only or or-only chain), and a Java predicate otherwise.
@@ -238,6 +268,15 @@ it with **New project → Import from files…**.
   `FastSubmission` are inventory objects too. So a payment request looks like
   `{"qrId": "…", "amount": {"value": 4.80, "currency": "SGD"}, "payer": {"accountId": "0123456789"}}`,
   and the rules use `amount.value`, `amount.currency` and `payer.accountId`.
+- **Error codes.** 35 codes, all linked:
+  - `SGQR-1xxx` request validation, on fields such as `Money.value` and `Payer.accountId`;
+  - `SGQR-2xxx` QR and merchant rules and `SGQR-3xxx` balance, limit and fraud refusals, picked by
+    the Validate checks;
+  - `SGQR-4xxx` not found;
+  - `SGQR-5xxx` downstream failures, on each call and its resilience rule;
+  - `SGQR-6xxx` storage and messaging.
+
+  The Order Service sample has eight (`ORD-001`…`ORD-021`).
 - **Two QR types.** A `PREFILLED` QR carries the amount, so the payer only confirms. For an
   `AMOUNT_ENTRY` QR, the payer types the amount.
 - **QR Codes:** `POST /qr-codes`:
@@ -280,7 +319,8 @@ are not generated.
 - **A project export** (`<name>.specbuilder.json`, from **Export project (JSON)** in project settings). It is
   the whole project as readable JSON: settings, payloads, endpoints and rules. Payloads are referred to by
   name everywhere, including in rule configs (`"targetPayload": "Order"`), so the file has no database ids.
-  Each payload carries its `role`. Exports made before roles existed still import: payloads that other
+  Each payload carries its `role`. The file also carries the `errorCodes`, and fields, rules and checks
+  refer to them by code (`"errorCodes": ["PAY-001"]`, a check's `"errorCode": "PAY-001"`). Exports made before roles existed still import: payloads that other
   payloads use as a field type become inventory objects. Imported OpenAPI/AsyncAPI schemas are sorted the
   same way.
 - **OpenAPI 3.0/3.1 and AsyncAPI 2.x/3.0 files** (YAML or JSON). Several files, e.g. an OpenAPI and an
@@ -296,6 +336,8 @@ are not generated.
     - list or primitive bodies, which are wrapped in a payload;
     - names that aren't valid Java names, which are renamed.
   - Recursive schemas turn on "allow circular references".
+  - SpecForge's own `x-error-codes` (the catalog and the codes on properties) come back as error codes
+    linked to those fields.
 
 Imports go through the normal validation in one transaction: an invalid file creates nothing, and each
 error names the part of the file it's about (e.g. `payloads[2].fields[0].refPayload`). A taken project
@@ -360,6 +402,9 @@ All under `/api`. Errors are RFC 9457 problem documents. A `400` lists every pro
 | `GET …/endpoints/{id}/rules` | the chain: rules in order, a numbered plain-English summary, warnings |
 | `POST …/rules` (optional `position`), `GET/PUT/DELETE …/rules/{ruleId}` | rule CRUD |
 | `PUT …/rules/order` with `{ruleIds: [...]}` | reorder |
+| `GET/POST …/{projectId}/error-codes`, `GET/PUT/DELETE …/error-codes/{id}` | error-code CRUD; each code lists its `links` (FIELD, RULE, CHECK). Delete unlinks it everywhere |
+| `PUT …/error-codes/{id}/links` with `{links: [{kind: "FIELD", payloadId, field} \| {kind: "RULE", ruleId}]}` | link the code to exactly these fields and rules |
+| payload fields' and rules' `errorCodeIds` | the codes they fail with, in order; left out on an update, they stay as they are |
 | `GET /meta` | every enum's values, for building the editor's drop-downs |
 
 ### What is validated
@@ -379,6 +424,9 @@ All under `/api`. Errors are RFC 9457 problem documents. A `400` lists every pro
   error names the cycle, e.g. `Alpha → Beta → Alpha`.
 - **Rule configs**: unknown properties and bad values are rejected, and referenced payloads must be in
   the project.
+- **Error codes**: upper-case letters and digits separated by `-`, `_` or `.` (at most 40), unique in the
+  project ignoring case, a message, and an error status (400–599) if one is set. Fields, rules and checks
+  may only refer to the project's own codes.
 - **Rule chain warnings** (the rule still saves): field paths that don't exist, checks that don't suit the
   field type, splitting something that isn't an array, an error handler aimed at a rule that doesn't
   exist, and an entity name that clashes with a payload.
