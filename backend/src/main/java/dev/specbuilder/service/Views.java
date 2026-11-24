@@ -20,7 +20,7 @@ final class Views {
 
     static PayloadView payload(Payload p) {
         return new PayloadView(p.getId(), p.getProject().getId(), p.getName(), p.getDescription(), p.getExample(),
-                p.getFields().stream().map(Views::field).toList());
+                p.getFields().stream().map(Views::field).toList(), p.getRole());
     }
 
     static FieldDto field(PayloadField f) {

@@ -12,6 +12,8 @@ import { ErrorSummary } from '../components/ErrorSummary'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { UsagesDialog } from '../components/UsagesDialog'
 import { PayloadEditor } from '../editors/PayloadEditor'
+import { InventoryPalette } from '../components/inventory/InventoryPalette'
+import { ObjectDndProvider } from '../components/inventory/ObjectDnd'
 import { toPayloadRequest } from '../lib/mappers'
 import { useDraft } from '../lib/useDraft'
 import { UnsavedChangesGuard } from '../components/UnsavedChangesGuard'
@@ -76,7 +78,7 @@ function PayloadPageContent({ projectId, payload, payloads }: { projectId: strin
       <UnsavedChangesGuard dirty={dirty} />
       <EditorHeader
         title={payload.name}
-        subtitle="Payload"
+        subtitle={payload.role === 'OBJECT' ? 'Inventory object' : 'Structure'}
         dirty={dirty}
         saving={saving}
         onSave={save}
@@ -88,7 +90,7 @@ function PayloadPageContent({ projectId, payload, payloads }: { projectId: strin
           </>
         }
       />
-      <Box sx={{ p: 3, maxWidth: 1200 }}>
+      <Box sx={{ p: 3, maxWidth: 1500 }}>
         <ErrorSummary error={error} />
         <Stack direction="row" spacing={1} useFlexGap sx={{ mb: 2, alignItems: 'center', flexWrap: 'wrap' }} aria-label="Used by">
           <Typography variant="body2" color="text.secondary">Used by:</Typography>
@@ -97,7 +99,12 @@ function PayloadPageContent({ projectId, payload, payloads }: { projectId: strin
             <Chip key={i} variant="outlined" clickable onClick={() => goTo(u)} label={<><b>{u.ownerName}</b> · {u.detail}</>} />
           ))}
         </Stack>
-        <PayloadEditor value={draft} onChange={setDraft} payloads={payloads} selfId={payload.id} error={error} />
+        <ObjectDndProvider>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 270px', gap: 3, alignItems: 'start' }}>
+            <PayloadEditor value={draft} onChange={setDraft} payloads={payloads} selfId={payload.id} error={error} />
+            <InventoryPalette projectId={projectId} payloads={payloads} excludeId={payload.id} />
+          </Box>
+        </ObjectDndProvider>
       </Box>
       <ConfirmDialog open={confirmDelete} title={`Delete payload ${payload.name}?`} onConfirm={remove} onClose={() => setConfirmDelete(false)}>
         This cannot be undone.

@@ -5,7 +5,7 @@ import { cleanConfig, defaultConfig } from '../lib/rules'
 import { groupEndpoints } from '../lib/endpoints'
 import type { Endpoint, Parameter, Payload } from '../api/types'
 
-const payload = (id: string, name: string, fields: Payload['fields']): Payload => ({ id, projectId: 'p', name, fields })
+const payload = (id: string, name: string, fields: Payload['fields']): Payload => ({ id, projectId: 'p', name, fields, role: 'STRUCTURE' })
 const f = (name: string, type: Payload['fields'][number]['type'], extra: Partial<Payload['fields'][number]> = {}) =>
   ({ name, type, required: false, enumValues: [], ...extra })
 

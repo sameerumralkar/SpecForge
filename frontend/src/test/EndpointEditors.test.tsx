@@ -12,7 +12,7 @@ const rest: EndpointRequest = {
   parameters: [{ name: 'orderId', location: 'PATH', type: 'UUID', required: true }],
   responses: [{ statusCode: '200', description: 'OK', payloadId: null }], security: [],
 }
-const payloads: Payload[] = [{ id: 'o', projectId: 'p', name: 'Order', fields: [] }]
+const payloads: Payload[] = [{ id: 'o', projectId: 'p', name: 'Order', fields: [], role: 'STRUCTURE' }]
 
 function Both({ initial, onValue }: { initial: EndpointRequest; onValue: (v: EndpointRequest) => void }) {
   const [value, setValue] = useState(initial)

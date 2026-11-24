@@ -118,13 +118,19 @@ class GeneratedProjectCompilesTest extends ApiTestSupport {
         }
         JsonNode code = get("/api/projects/" + p + "/code").json();
         String service = null;
+        String request = null;
         for (JsonNode f : code.get("files")) {
             if (f.get("path").asString().endsWith("/service/PaymentsServiceImpl.java")) service = f.get("content").asString();
+            if (f.get("path").asString().endsWith("/dto/PaymentRequest.java")) request = f.get("content").asString();
         }
+        // Restructured around inventory objects: Money{value, currency} and Payer{accountId, name}.
+        assertThat(request).contains("private Money amount;", "private Payer payer;").doesNotContain("payerAccountId");
+        assertThat(get("/api/projects/" + p + "/payloads?role=OBJECT").json().toString()).contains("\"Money\"", "\"Payer\"", "\"Merchant\"");
         assertThat(service)
                 .contains("QrCode loaded = qrCodeEntityStore.findById(", "current.setQr(loaded);")
                 .contains("throw new RuleViolationException(422, \"This QR has expired\");")
-                .contains("throw new RuleViolationException(422, \"Insufficient funds\");");
+                .contains("throw new RuleViolationException(422, \"Insufficient funds\");")
+                .contains("getAvailableBalance()).map($v -> $v.getValue())");
         compile(p, "sgqr");
     }
 

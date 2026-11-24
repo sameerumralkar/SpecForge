@@ -27,6 +27,10 @@ public class Payload {
     @Column(length = 20000)
     private String example;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private PayloadRole role = PayloadRole.STRUCTURE;
+
     @ElementCollection
     @CollectionTable(name = "payload_field", joinColumns = @JoinColumn(name = "payload_id"))
     @OrderColumn(name = "ordinal")
@@ -47,6 +51,8 @@ public class Payload {
     public void setDescription(String description) { this.description = description; }
     public String getExample() { return example; }
     public void setExample(String example) { this.example = example; }
+    public PayloadRole getRole() { return role; }
+    public void setRole(PayloadRole role) { this.role = role; }
     public List<PayloadField> getFields() { return fields; }
 
     public void replaceFields(List<PayloadField> newFields) {

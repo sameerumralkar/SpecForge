@@ -31,6 +31,7 @@ public class MetaController {
         meta.put("protocols", MessagingProtocol.values());
         meta.put("securitySchemes", SecurityScheme.values());
         meta.put("implementationStyles", ImplementationStyle.values());
+        meta.put("payloadRoles", PayloadRole.values());
         meta.put("ruleTypes", Arrays.stream(RuleType.values()).map(t -> new RuleTypeInfo(t, t.label())).toList());
         meta.put("validateCheckKinds", ValidateConfig.CheckKind.values());
         meta.put("enrichModes", EnrichConfig.Mode.values());

@@ -5,7 +5,7 @@ code and architecture diagrams.
 
 **Status: all six phases are done.** The app covers:
 
-- the editor;
+- the editor, with an object inventory of reusable building blocks you drag into requests and responses;
 - generation of specs (OpenAPI 3.1 / AsyncAPI 3.0, validated), Java code (implementation classes and Camel
   routes) and diagrams (Mermaid and PlantUML);
 - import from OpenAPI/AsyncAPI files and project JSON, and export to project JSON;
@@ -23,8 +23,8 @@ cd frontend && npm install && npm run dev  # UI on http://localhost:5173 (calls 
 Tests:
 
 ```bash
-cd backend && mvn test        # 135 tests; see the notes below
-cd frontend && npm test       # 48 component and unit tests (Vitest + Testing Library)
+cd backend && mvn test        # 138 tests; see the notes below
+cd frontend && npm test       # 52 component and unit tests (Vitest + Testing Library)
 ```
 
 - The PostgreSQL test needs Docker, and is skipped without it.
@@ -56,7 +56,7 @@ Generated projects will also target Spring Boot 4.x with Apache Camel 4.
 | Entity | What it holds |
 |---|---|
 | **Project** | name, base package, version, description, default implementation style, "allow circular references" |
-| **Payload** | a reusable schema: name, description, JSON example, ordered fields |
+| **Payload** | a reusable schema: name, description, JSON example, ordered fields, and a role: `OBJECT` (a building block in the object inventory, e.g. Money, Address) or `STRUCTURE` (a request, response, message or working body) |
 | **Payload field** | name, type (`STRING INTEGER LONG NUMBER DECIMAL BOOLEAN DATE DATE_TIME UUID OBJECT ARRAY`), item type for arrays, referenced payload for objects, required, format, min/max length, min/max value, pattern, allowed values |
 | **Endpoint** | `REST`: method, path, path/query/header parameters, request payload, responses per status, security. `ASYNC`: channel, `SEND`/`RECEIVE`, protocol (`KAFKA JMS AMQP`), message payload, headers. Both: name (operation id), summary, tags, implementation style (or the project default) |
 | **Processing rule** | ordered per endpoint: type, name, optional condition, type-specific config (stored as JSON) |
@@ -83,9 +83,9 @@ can also refer to an endpoint parameter, e.g. `orderId` on `GET /orders/{orderId
 ## The editor
 
 - **Sidebar:** the menu below, endpoints grouped by their first tag (REST) or by channel
-  (async), and payloads. Each item's ⋮ menu has Duplicate and Delete.
-- **Left menu:** **Overview & settings**, **API spec** (OpenAPI/AsyncAPI with validation), **Generated code**
-  and **Diagrams** each open a full page; below them are the endpoints and payloads. The **Preview** button
+  (async), and payloads split into inventory objects and structures. Each item's ⋮ menu has Duplicate and Delete.
+- **Left menu:** **Overview & settings**, **Object inventory**, **API spec** (OpenAPI/AsyncAPI with
+  validation), **Generated code** and **Diagrams** each open a full page; below them are the endpoints and payloads. The **Preview** button
   in the top bar shows the same outputs beside the editor.
 - **Endpoint editor:** five tabs.
   - **Definition:** name, summary, description, tags, kind (REST or async, switchable; the body becomes the
@@ -96,8 +96,19 @@ can also refer to an endpoint parameter, e.g. `orderId` on `GET /orders/{orderId
     and warnings.
   - **Implementation:** implementation class vs processing route, and how each rule will be generated.
   - **Diagrams:** this endpoint's sequence diagram and class diagram.
-- **Payload editor:** fields table (type, list item type, referenced payload, required, plus a
-  constraints panel), a JSON example in Monaco, and "used by" links. A blocked delete lists every use.
+- **Payload editor:** an Inventory object / Structure switch, a fields table (type, list item type,
+  referenced object, required, plus a constraints panel), a JSON example in Monaco, and "used by" links. A
+  blocked delete lists every use.
+- **Object inventory:** a page listing the inventory objects with their fields and where each is used,
+  with New object, Edit, Duplicate, Delete (refused, with the list of uses, while anything uses it) and
+  moving payloads between the inventory and the structures.
+- **Drag and drop:** the payload editor and an endpoint's Request / Response tab have an inventory panel.
+  Drag an object from it onto:
+  - the **fields** of a payload, to add a field of that type (named after the object, e.g. `money`);
+  - the **request body**, a **response**, or an async **message**, to use it as that body.
+
+  While dragging, each drop zone is outlined and says what dropping does. A drop is an unsaved edit, like
+  any other. Payload pickers list inventory objects first, then structures.
 - Server validation errors show next to the field they are about, and are also listed at the top. Unsaved
   changes are flagged, and leaving the page asks first.
 
@@ -221,6 +232,12 @@ API: `GET /api/projects/{id}/diagrams` (all, both notations),
 `examples/sgqr-paynow-payments.specbuilder.json` is a Singapore QR (SGQR) payment service with PayNow. Import
 it with **New project → Import from files…**.
 
+- **Built from inventory objects.** `Money {value, currency}` and `Payer {accountId, name}` replace the
+  separate `amount`/`currency` and `payerAccountId`/`payerName` fields in the requests, responses and
+  events. `Merchant`, `QrCode`, `EmvPayload`, `AccountBalance`, `TransferLimits`, `RiskAssessment` and
+  `FastSubmission` are inventory objects too. So a payment request looks like
+  `{"qrId": "…", "amount": {"value": 4.80, "currency": "SGD"}, "payer": {"accountId": "0123456789"}}`,
+  and the rules use `amount.value`, `amount.currency` and `payer.accountId`.
 - **Two QR types.** A `PREFILLED` QR carries the amount, so the payer only confirms. For an
   `AMOUNT_ENTRY` QR, the payer types the amount.
 - **QR Codes:** `POST /qr-codes`:
@@ -263,6 +280,9 @@ are not generated.
 - **A project export** (`<name>.specbuilder.json`, from **Export project (JSON)** in project settings). It is
   the whole project as readable JSON: settings, payloads, endpoints and rules. Payloads are referred to by
   name everywhere, including in rule configs (`"targetPayload": "Order"`), so the file has no database ids.
+  Each payload carries its `role`. Exports made before roles existed still import: payloads that other
+  payloads use as a field type become inventory objects. Imported OpenAPI/AsyncAPI schemas are sorted the
+  same way.
 - **OpenAPI 3.0/3.1 and AsyncAPI 2.x/3.0 files** (YAML or JSON). Several files, e.g. an OpenAPI and an
   AsyncAPI file, become one project. Payloads with the same name and fields in both are merged.
   - Schemas become payloads, keeping types, formats, required, length and value limits, patterns, allowed
@@ -332,7 +352,8 @@ All under `/api`. Errors are RFC 9457 problem documents. A `400` lists every pro
 |---|---|
 | `GET/POST /projects`, `GET/PUT/DELETE /projects/{id}` | project CRUD; delete removes everything inside |
 | `POST /projects/samples/order-service` | add a fresh copy of the sample |
-| `GET/POST …/{projectId}/payloads`, `GET/PUT/DELETE …/payloads/{id}` | payload CRUD |
+| `GET/POST …/{projectId}/payloads`, `GET/PUT/DELETE …/payloads/{id}` | payload CRUD; `role` is `OBJECT` or `STRUCTURE` (a new payload defaults to `STRUCTURE`, an update without it keeps the role) |
+| `GET …/payloads?role=OBJECT` | the object inventory (or `STRUCTURE` for the rest) |
 | `POST …/payloads/{id}/duplicate` · `GET …/payloads/{id}/usages` | copy (as `NameCopy`), and list where it is used |
 | `GET/POST …/{projectId}/endpoints`, `GET/PUT/DELETE …/endpoints/{id}` | endpoint CRUD |
 | `POST …/endpoints/{id}/duplicate` | copy with rules; a REST copy gets `/copy` added to its path |

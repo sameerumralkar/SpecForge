@@ -7,7 +7,7 @@ import { ApiError } from '../api/client'
 import type { Payload, PayloadRequest } from '../api/types'
 import { renderWithProviders } from './render'
 
-const address: Payload = { id: 'a', projectId: 'p', name: 'Address', fields: [] }
+const address: Payload = { id: 'a', projectId: 'p', name: 'Address', fields: [], role: 'OBJECT' }
 
 function Harness({ initial, error, onValue }: { initial: PayloadRequest; error?: unknown; onValue?: (v: PayloadRequest) => void }) {
   const [value, setValue] = useState(initial)
@@ -29,10 +29,10 @@ describe('PayloadEditor', () => {
     expect(screen.getByText('No fields yet.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Add field' }))
     await user.type(screen.getByLabelText('Field 1 name'), 'home')
-    expect(screen.queryByLabelText('Payload')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Object')).not.toBeInTheDocument()
 
     await choose(user, 'Field 1 type', 'OBJECT')
-    await user.click(screen.getByRole('combobox', { name: /Payload/ }))
+    await user.click(screen.getByRole('combobox', { name: /^Object/ }))
     await user.click(screen.getByRole('option', { name: 'Address' }))
     await user.click(screen.getByLabelText('Field 1 required'))
 

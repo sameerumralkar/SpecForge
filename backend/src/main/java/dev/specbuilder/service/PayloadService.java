@@ -44,8 +44,15 @@ public class PayloadService {
 
     @Transactional(readOnly = true)
     public List<PayloadView> list(UUID projectId) {
+        return list(projectId, null);
+    }
+
+    /** The project's payloads by name; only one role's when {@code role} is given (the object inventory is role OBJECT). */
+    @Transactional(readOnly = true)
+    public List<PayloadView> list(UUID projectId, PayloadRole role) {
         projectService.require(projectId);
         return payloads.findByProjectId(projectId).stream()
+                .filter(p -> role == null || p.getRole() == role)
                 .sorted(Comparator.comparing(Payload::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(Views::payload)
                 .toList();
@@ -93,6 +100,7 @@ public class PayloadService {
         copy.setName(uniqueName(source.getName() + "Copy", taken));
         copy.setDescription(source.getDescription());
         copy.setExample(source.getExample());
+        copy.setRole(source.getRole());
         for (PayloadField f : source.getFields()) {
             PayloadField c = f.copy();
             if (f.getRefPayload() == source) {
@@ -207,6 +215,7 @@ public class PayloadService {
         target.setName(name);
         target.setDescription(ValidationErrors.trimToNull(request.description()));
         target.setExample(example);
+        if (request.role() != null) target.setRole(request.role());
         target.replaceFields(fields);
     }
 

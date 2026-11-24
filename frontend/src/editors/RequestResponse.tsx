@@ -5,6 +5,8 @@ import {
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import type { EndpointRequest, FieldType, Parameter, ParameterLocation, Payload, ResponseDef } from '../api/types'
+import { ObjectDropZone } from '../components/inventory/ObjectDnd'
+import { payloadOptions } from '../components/inventory/PayloadOptions'
 import { errorText } from '../lib/errors'
 import { mono } from '../theme'
 
@@ -24,7 +26,7 @@ function PayloadSelect({ label, value, onChange, payloads, error, disabled, help
     <TextField select label={label} value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} disabled={disabled}
       error={!!error} helperText={error ?? helper}>
       {allowNone && <MenuItem value=""><em>None</em></MenuItem>}
-      {payloads.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+      {payloadOptions(payloads)}
     </TextField>
   )
 }
@@ -50,12 +52,15 @@ export function RequestResponse({ value, onChange, payloads, error }: {
   return (
     <Stack spacing={3}>
       {!rest && (
-        <Card variant="outlined">
-          <CardContent>
-            <PayloadSelect label="Message payload" value={value.messagePayloadId} allowNone={false}
-              onChange={(id) => onChange({ ...value, messagePayloadId: id })} payloads={payloads} error={err('messagePayloadId')} />
-          </CardContent>
-        </Card>
+        <ObjectDropZone id="message" label="the message payload" hint="Use {name} as the message"
+          onDrop={(o) => onChange({ ...value, messagePayloadId: o.id })}>
+          <Card variant="outlined">
+            <CardContent>
+              <PayloadSelect label="Message payload" value={value.messagePayloadId} allowNone={false}
+                onChange={(id) => onChange({ ...value, messagePayloadId: id })} payloads={payloads} error={err('messagePayloadId')} />
+            </CardContent>
+          </Card>
+        </ObjectDropZone>
       )}
 
       <Card variant="outlined">
@@ -123,13 +128,16 @@ export function RequestResponse({ value, onChange, payloads, error }: {
 
       {rest && (
         <>
-          <Card variant="outlined">
-            <CardContent>
-              <PayloadSelect label="Request body" value={value.requestPayloadId} disabled={noBody && !value.requestPayloadId}
-                onChange={(id) => onChange({ ...value, requestPayloadId: id })} payloads={payloads} error={err('requestPayloadId')}
-                helper={noBody ? `${value.httpMethod} requests have no body` : undefined} />
-            </CardContent>
-          </Card>
+          <ObjectDropZone id="request-body" label="the request body" hint="Use {name} as the request body" disabled={noBody}
+            onDrop={(o) => onChange({ ...value, requestPayloadId: o.id })}>
+            <Card variant="outlined">
+              <CardContent>
+                <PayloadSelect label="Request body" value={value.requestPayloadId} disabled={noBody && !value.requestPayloadId}
+                  onChange={(id) => onChange({ ...value, requestPayloadId: id })} payloads={payloads} error={err('requestPayloadId')}
+                  helper={noBody ? `${value.httpMethod} requests have no body` : undefined} />
+              </CardContent>
+            </Card>
+          </ObjectDropZone>
 
           <Card variant="outlined">
             <CardHeader title="Responses" slotProps={{ title: { variant: 'subtitle1' } }}
@@ -157,10 +165,13 @@ export function RequestResponse({ value, onChange, payloads, error }: {
                         <TextField value={r.description ?? ''} onChange={(e) => setResponse(i, { description: e.target.value })} />
                       </TableCell>
                       <TableCell>
-                        <Box>
-                          <PayloadSelect label="" value={r.payloadId} onChange={(id) => setResponse(i, { payloadId: id })} payloads={payloads}
-                            error={err(at + 'payloadId')} />
-                        </Box>
+                        <ObjectDropZone id={`response-${i}`} label={`response ${r.statusCode || i + 1}`} hint="Use {name}"
+                          onDrop={(o) => setResponse(i, { payloadId: o.id })}>
+                          <Box>
+                            <PayloadSelect label="" value={r.payloadId} onChange={(id) => setResponse(i, { payloadId: id })} payloads={payloads}
+                              error={err(at + 'payloadId')} />
+                          </Box>
+                        </ObjectDropZone>
                       </TableCell>
                       <TableCell>
                         <IconButton aria-label={`Remove response ${i + 1}`} onClick={() => onChange({ ...value, responses: value.responses.filter((_, j) => j !== i) })}>

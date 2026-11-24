@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import dev.specbuilder.domain.PayloadRole;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -22,8 +24,8 @@ public class PayloadController {
     }
 
     @GetMapping
-    public List<PayloadView> list(@PathVariable UUID projectId) {
-        return payloads.list(projectId);
+    public List<PayloadView> list(@PathVariable UUID projectId, @RequestParam(required = false) PayloadRole role) {
+        return payloads.list(projectId, role);
     }
 
     @GetMapping("/{id}")

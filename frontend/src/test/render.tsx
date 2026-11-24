@@ -30,11 +30,11 @@ export const META: Meta = {
 }
 
 /** Renders inside the same providers as the app, with query data seeded so nothing hits the network. */
-export function renderWithProviders(ui: ReactNode, seed: [readonly unknown[], unknown][] = []) {
+export function renderWithProviders(ui: ReactNode, seed: [readonly unknown[], unknown][] = [], path = '/') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
   client.setQueryData(['meta'], META)
   seed.forEach(([key, data]) => client.setQueryData(key, data))
-  const router = createMemoryRouter([{ path: '*', element: ui }])
+  const router = createMemoryRouter([{ path: '*', element: ui }], { initialEntries: [path] })
   return {
     client,
     ...render(

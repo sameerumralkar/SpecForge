@@ -22,7 +22,12 @@ public record ProjectExport(String format, Integer version, ProjectData project,
                               ImplementationStyle defaultImplementationStyle, Boolean allowCircularReferences) {
     }
 
-    public record PayloadData(String name, String description, String example, List<FieldData> fields) {
+    /** {@code role} may be left out (older exports): payloads other payloads use as a field type become OBJECTs. */
+    public record PayloadData(String name, String description, String example, List<FieldData> fields, PayloadRole role) {
+
+        public PayloadData(String name, String description, String example, List<FieldData> fields) {
+            this(name, description, example, fields, null);
+        }
     }
 
     public record FieldData(String name, FieldType type, FieldType itemType, String refPayload, Boolean required,

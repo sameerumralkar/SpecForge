@@ -53,7 +53,7 @@ public class SampleProjects {
                         + "listens for payment results to update the order.",
                 ImplementationStyle.IMPLEMENTATION_CLASS, false)).id();
 
-        UUID address = payload(p, "Address", "A postal address.",
+        UUID address = object(p, "Address", "A postal address.",
                 "{\"street\":\"1 Main St\",\"city\":\"Springfield\",\"postalCode\":\"12345\",\"country\":\"US\"}",
                 str("street", true), str("city", true),
                 field("postalCode", FieldType.STRING, true, f -> f.pattern = "[A-Z0-9 -]{3,10}"),
@@ -62,13 +62,13 @@ public class SampleProjects {
                     f.maxLength = 2;
                     f.description = "ISO 3166-1 alpha-2 country code";
                 }));
-        UUID customer = payload(p, "Customer", "A customer as returned by customer-service.", null,
+        UUID customer = object(p, "Customer", "A customer as returned by customer-service.", null,
                 field("id", FieldType.UUID, true, f -> { }),
                 str("name", true),
                 field("email", FieldType.STRING, true, f -> f.format = "email"),
                 field("tier", FieldType.STRING, false, f -> f.enumValues = List.of("STANDARD", "GOLD", "PLATINUM")),
                 ref("shippingAddress", address, false));
-        UUID item = payload(p, "OrderItem", "One line of an order.", null,
+        UUID item = object(p, "OrderItem", "One line of an order.", null,
                 field("sku", FieldType.STRING, true, f -> f.pattern = "[A-Z0-9-]{4,20}"),
                 field("quantity", FieldType.INTEGER, true, f -> {
                     f.minimum = 1.0;
@@ -81,7 +81,7 @@ public class SampleProjects {
                 list("items", item, true, 1),
                 ref("shippingAddress", address, false),
                 field("notes", FieldType.STRING, false, f -> f.maxLength = 500));
-        UUID order = payload(p, "Order", "A stored order.", null,
+        UUID order = object(p, "Order", "A stored order.", null,
                 field("id", FieldType.UUID, true, f -> { }),
                 field("customerId", FieldType.UUID, true, f -> { }),
                 ref("customer", customer, false),
@@ -209,7 +209,12 @@ public class SampleProjects {
     }
 
     private UUID payload(UUID project, String name, String description, String example, FieldDto... fields) {
-        return payloads.create(project, new PayloadRequest(name, description, example, List.of(fields))).id();
+        return payloads.create(project, new PayloadRequest(name, description, example, List.of(fields), PayloadRole.STRUCTURE)).id();
+    }
+
+    /** A building block for the object inventory. */
+    private UUID object(UUID project, String name, String description, String example, FieldDto... fields) {
+        return payloads.create(project, new PayloadRequest(name, description, example, List.of(fields), PayloadRole.OBJECT)).id();
     }
 
     private static ResponseDto response(String status, String description, UUID payload) {

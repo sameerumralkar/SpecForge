@@ -1,6 +1,7 @@
 package dev.specbuilder.importexport;
 
 import dev.specbuilder.api.dto.*;
+import dev.specbuilder.domain.PayloadRole;
 import dev.specbuilder.importexport.ProjectExport.*;
 import dev.specbuilder.repository.ProjectRepository;
 import dev.specbuilder.service.EndpointService;
@@ -50,7 +51,7 @@ public class ProjectImportExportService {
         List<PayloadData> payloadData = payloadViews.stream().map(v -> new PayloadData(v.name(), v.description(), v.example(),
                 v.fields().stream().map(f -> new FieldData(f.name(), f.type(), f.itemType(), f.refPayloadName(), Boolean.TRUE.equals(f.required()),
                         f.format(), f.description(), f.example(), f.minLength(), f.maxLength(), f.minimum(), f.maximum(), f.pattern(),
-                        f.enumValues())).toList())).toList();
+                        f.enumValues())).toList(), v.role())).toList();
 
         List<EndpointData> endpointData = endpoints.list(projectId).stream()
                 .sorted(Comparator.comparing(EndpointView::name))
@@ -113,10 +114,14 @@ public class ProjectImportExportService {
         // Payloads first without fields, so fields can refer to any of them; then with fields.
         List<PayloadData> payloadData = data.payloads() == null ? List.of() : data.payloads();
         Map<String, UUID> ids = new HashMap<>();
+        Set<String> usedAsFieldType = new HashSet<>();
+        payloadData.forEach(pd -> (pd.fields() == null ? List.<FieldData>of() : pd.fields()).stream()
+                .map(FieldData::refPayload).filter(r -> r != null && !r.equals(pd.name())).forEach(usedAsFieldType::add));
         for (int i = 0; i < payloadData.size(); i++) {
             PayloadData pd = payloadData.get(i);
+            PayloadRole role = pd.role() != null ? pd.role() : usedAsFieldType.contains(pd.name()) ? PayloadRole.OBJECT : PayloadRole.STRUCTURE;
             UUID id = prefixed("payloads[" + i + "]", () -> payloads.create(projectId,
-                    new PayloadRequest(pd.name(), pd.description(), pd.example(), List.of()))).id();
+                    new PayloadRequest(pd.name(), pd.description(), pd.example(), List.of(), role))).id();
             ids.put(pd.name(), id);
         }
         for (int i = 0; i < payloadData.size(); i++) {

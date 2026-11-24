@@ -13,17 +13,19 @@ function Where() {
 }
 
 describe('the left menu', () => {
-  it('leads to the overview, API spec, generated code and diagrams', async () => {
+  it('leads to the overview, object inventory, API spec, generated code and diagrams', async () => {
     const user = userEvent.setup()
     renderWithProviders(<Routes><Route path="*" element={<><Sidebar projectId="p" /><Where /></>} /></Routes>, [
       [['projects', 'p'], project], [['projects', 'p', 'endpoints'], []], [['projects', 'p', 'payloads'], []],
     ])
     const menu = screen.getByRole('list', { name: 'Project menu' })
-    expect(within(menu).getAllByRole('button').map((b) => b.textContent)).toEqual(['Overview & settings', 'API spec', 'Generated code', 'Diagrams'])
+    expect(within(menu).getAllByRole('button').map((b) => b.textContent)).toEqual(['Overview & settings', 'Object inventory', 'API spec', 'Generated code', 'Diagrams'])
     await user.click(within(menu).getByRole('button', { name: 'Diagrams' }))
     expect(screen.getByLabelText('Location')).toHaveTextContent('/projects/p/diagrams')
     expect(within(menu).getByRole('button', { name: 'Diagrams' })).toHaveClass('Mui-selected')
     await user.click(within(menu).getByRole('button', { name: 'Generated code' }))
     expect(screen.getByLabelText('Location')).toHaveTextContent('/projects/p/code')
+    await user.click(within(menu).getByRole('button', { name: 'Object inventory' }))
+    expect(screen.getByLabelText('Location')).toHaveTextContent('/projects/p/inventory')
   })
 })

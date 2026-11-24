@@ -13,6 +13,8 @@ import { MethodChip } from '../components/MethodChip'
 import { EndpointDefinition } from '../editors/EndpointDefinition'
 import { toEndpointRequest } from '../lib/mappers'
 import { RequestResponse } from '../editors/RequestResponse'
+import { InventoryPalette } from '../components/inventory/InventoryPalette'
+import { ObjectDndProvider } from '../components/inventory/ObjectDnd'
 import { RulesEditor } from '../editors/RulesEditor'
 import { ImplementationTab } from '../editors/ImplementationTab'
 import { useDraft } from '../lib/useDraft'
@@ -128,10 +130,17 @@ function EndpointEditor({ endpoint, endpoints, payloads, project }: {
           <Tab value="diagrams" label="Diagrams" />
         </Tabs>
       </Box>
-      <Box sx={{ p: 3, maxWidth: tab === 'rules' || tab === 'diagrams' ? undefined : 1100 }}>
+      <Box sx={{ p: 3, maxWidth: tab === 'rules' || tab === 'diagrams' ? undefined : tab === 'io' ? 1400 : 1100 }}>
         {tab !== 'rules' && <ErrorSummary error={error} />}
         {tab === 'definition' && <EndpointDefinition value={draft} onChange={setDraft} allTags={allTags} error={error} />}
-        {tab === 'io' && <RequestResponse value={draft} onChange={setDraft} payloads={payloads} error={error} />}
+        {tab === 'io' && (
+          <ObjectDndProvider>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 270px', gap: 3, alignItems: 'start' }}>
+              <RequestResponse value={draft} onChange={setDraft} payloads={payloads} error={error} />
+              <InventoryPalette projectId={project.id} payloads={payloads} />
+            </Box>
+          </ObjectDndProvider>
+        )}
         {tab === 'rules' && (
           <RulesEditor projectId={project.id} endpointId={endpoint.id} payloads={payloads} parameters={endpoint.parameters} endpointDirty={dirty} />
         )}

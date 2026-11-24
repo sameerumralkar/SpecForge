@@ -49,16 +49,22 @@ export interface Field {
   enumValues: string[]
 }
 
+/** OBJECT: a reusable building block in the object inventory. STRUCTURE: a request, response, message or working body. */
+export type PayloadRole = 'OBJECT' | 'STRUCTURE'
+
 export interface PayloadRequest {
   name: string
   description?: string | null
   example?: string | null
   fields: Field[]
+  /** Left out: a new payload is a STRUCTURE, an updated one keeps its role. */
+  role?: PayloadRole
 }
 
 export interface Payload extends PayloadRequest {
   id: string
   projectId: string
+  role: PayloadRole
 }
 
 export interface PayloadUsage {
@@ -158,6 +164,7 @@ export interface Meta {
   protocols: MessagingProtocol[]
   securitySchemes: SecurityScheme[]
   implementationStyles: ImplementationStyle[]
+  payloadRoles?: PayloadRole[]
   ruleTypes: { type: RuleType; label: string }[]
   validateCheckKinds: string[]
   enrichModes: string[]

@@ -9,11 +9,13 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import DescriptionIcon from '@mui/icons-material/Description'
 import CodeIcon from '@mui/icons-material/Code'
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import { ApiError, api } from '../api/client'
 import { useEndpoints, usePayloads, useProject, useRefreshProject } from '../api/hooks'
 import type { Endpoint, Payload, PayloadUsage } from '../api/types'
 import { MethodChip } from './MethodChip'
 import { groupEndpoints } from '../lib/endpoints'
+import { byRole } from '../lib/inventory'
 import { ConfirmDialog } from './ConfirmDialog'
 import { UsagesDialog } from './UsagesDialog'
 import { NewEndpointDialog } from './NewEndpointDialog'
@@ -23,6 +25,7 @@ type Target = { kind: 'endpoint'; item: Endpoint } | { kind: 'payload'; item: Pa
 
 const MENU = [
   { label: 'Overview & settings', path: '', icon: <SettingsIcon fontSize="small" /> },
+  { label: 'Object inventory', path: 'inventory', icon: <Inventory2OutlinedIcon fontSize="small" /> },
   { label: 'API spec', path: 'spec', icon: <DescriptionIcon fontSize="small" /> },
   { label: 'Generated code', path: 'code', icon: <CodeIcon fontSize="small" /> },
   { label: 'Diagrams', path: 'diagrams', icon: <AccountTreeIcon fontSize="small" /> },
@@ -44,6 +47,10 @@ export function Sidebar({ projectId }: { projectId: string }) {
   const [newPayload, setNewPayload] = useState(false)
 
   const groups = useMemo(() => groupEndpoints(endpoints.data ?? []), [endpoints.data])
+  const payloadGroups = useMemo(() => {
+    const { objects, structures } = byRole(payloads.data ?? [])
+    return [['Inventory objects', objects], ['Structures', structures]] as const
+  }, [payloads.data])
   const base = `/projects/${projectId}`
 
   const duplicate = async (t: Target) => {
@@ -128,11 +135,16 @@ export function Sidebar({ projectId }: { projectId: string }) {
         </ListSubheader>
       }>
         {payloads.data?.length === 0 && <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1 }}>No payloads yet</Typography>}
-        {payloads.data?.map((p) => (
-          <ListItemButton key={p.id} selected={pathname === `${base}/payloads/${p.id}`} onClick={() => navigate(`${base}/payloads/${p.id}`)}>
-            <ListItemText primary={p.name} secondary={`${p.fields.length} field${p.fields.length === 1 ? '' : 's'}`} />
-            {itemMenu({ kind: 'payload', item: p })}
-          </ListItemButton>
+        {payloadGroups.map(([group, items]) => items.length > 0 && (
+          <Box key={group}>
+            <Typography variant="overline" color="text.secondary" sx={{ px: 2, display: 'block', lineHeight: 2.2 }}>{group}</Typography>
+            {items.map((p) => (
+              <ListItemButton key={p.id} selected={pathname === `${base}/payloads/${p.id}`} onClick={() => navigate(`${base}/payloads/${p.id}`)}>
+                <ListItemText primary={p.name} secondary={`${p.fields.length} field${p.fields.length === 1 ? '' : 's'}`} />
+                {itemMenu({ kind: 'payload', item: p })}
+              </ListItemButton>
+            ))}
+          </Box>
         ))}
       </List>
 

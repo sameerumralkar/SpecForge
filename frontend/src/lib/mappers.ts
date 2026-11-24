@@ -10,6 +10,7 @@ export const toPayloadRequest = (p: Payload): PayloadRequest => ({
   description: p.description ?? '',
   example: p.example ?? '',
   fields: p.fields.map((f) => ({ ...f, refPayloadName: undefined })),
+  role: p.role,
 })
 
 /** The editable part of an endpoint, as the update API takes it. */

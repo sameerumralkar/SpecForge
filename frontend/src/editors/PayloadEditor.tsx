@@ -1,14 +1,17 @@
 import { Fragment, lazy, Suspense, useState } from 'react'
 import {
   Autocomplete, Box, Button, Card, CardContent, CardHeader, Checkbox, Chip, Collapse, IconButton, MenuItem, Stack,
-  Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography,
+  Table, TableBody, TableCell, TableHead, TableRow, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import TuneIcon from '@mui/icons-material/Tune'
-import type { Field, FieldType, Payload, PayloadRequest } from '../api/types'
+import type { Field, FieldType, Payload, PayloadRequest, PayloadRole } from '../api/types'
+import { ObjectDropZone } from '../components/inventory/ObjectDnd'
+import { payloadOptions } from '../components/inventory/PayloadOptions'
+import { objectField } from '../lib/inventory'
 import { errorText } from '../lib/errors'
 import { mono } from '../theme'
 import { emptyField, FIELD_TYPES } from '../lib/mappers'
@@ -70,10 +73,24 @@ export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
               error={!!err('name')} helperText={err('name') ?? 'UpperCamelCase. Renaming updates every reference.'} />
             <TextField label="Description" multiline minRows={2} value={value.description ?? ''}
               onChange={(e) => onChange({ ...value, description: e.target.value })} error={!!err('description')} helperText={err('description')} />
+            <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+              <ToggleButtonGroup exclusive size="small" value={value.role ?? 'STRUCTURE'} aria-label="Kind of payload"
+                onChange={(_, role: PayloadRole | null) => role && onChange({ ...value, role })}>
+                <ToggleButton value="OBJECT">Inventory object</ToggleButton>
+                <ToggleButton value="STRUCTURE">Structure</ToggleButton>
+              </ToggleButtonGroup>
+              <Typography variant="body2" color="text.secondary">
+                {(value.role ?? 'STRUCTURE') === 'OBJECT'
+                  ? 'A reusable building block: it appears in the object inventory, ready to drag into other payloads and bodies.'
+                  : 'A request, response, message or working body, built from fields and inventory objects.'}
+              </Typography>
+            </Stack>
           </Stack>
         </CardContent>
       </Card>
 
+      <ObjectDropZone id="payload-fields" label="the field list" hint="Add {name} as a field"
+        onDrop={(object) => setFields([...value.fields, objectField(object, value.fields)])}>
       <Card variant="outlined">
         <CardHeader title="Fields" slotProps={{ title: { variant: 'subtitle1' } }}
           action={<Button startIcon={<AddIcon />} onClick={() => setFields([...value.fields, emptyField()])}>Add field</Button>} />
@@ -83,7 +100,7 @@ export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
             <TableRow>
               <TableCell sx={{ width: '28%' }}>Name</TableCell>
               <TableCell sx={{ width: 172 }}>Type</TableCell>
-              <TableCell>Items / payload</TableCell>
+              <TableCell>Items / object</TableCell>
               <TableCell align="center" sx={{ width: 84 }}>Required</TableCell>
               <TableCell align="right" sx={{ width: 168 }} />
             </TableRow>
@@ -119,9 +136,9 @@ export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
                           </TextField>
                         )}
                         {needsRef(f) && (
-                          <TextField select label="Payload" value={f.refPayloadId ?? ''} onChange={(e) => setField(i, { refPayloadId: e.target.value })}
-                            error={!!err(at + 'refPayloadId')} helperText={err(at + 'refPayloadId')}>
-                            {payloads.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}{p.id === selfId ? ' (this payload)' : ''}</MenuItem>)}
+                          <TextField select label="Object" value={f.refPayloadId ?? ''} onChange={(e) => setField(i, { refPayloadId: e.target.value })}
+                            error={!!err(at + 'refPayloadId')} helperText={err(at + 'refPayloadId')} slotProps={{ htmlInput: { 'aria-label': `Field ${i + 1} object` } }}>
+                            {payloadOptions(payloads, selfId)}
                           </TextField>
                         )}
                       </Stack>
@@ -153,6 +170,7 @@ export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
           </TableBody>
         </Table>
       </Card>
+      </ObjectDropZone>
 
       <Card variant="outlined">
         <CardHeader title="Example (JSON)" slotProps={{ title: { variant: 'subtitle1' } }} subheader="Used in the generated specs" />

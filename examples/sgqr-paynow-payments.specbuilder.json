@@ -11,6 +11,86 @@
   },
   "payloads": [
     {
+      "name": "Money",
+      "role": "OBJECT",
+      "description": "An amount of money in one currency.",
+      "example": "{\"value\": 4.8, \"currency\": \"SGD\"}",
+      "fields": [
+        {
+          "name": "value",
+          "type": "DECIMAL",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "The amount, e.g. 4.80",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        },
+        {
+          "name": "currency",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "ISO 4217 currency code",
+          "example": "SGD",
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": "^[A-Z]{3}$",
+          "enumValues": []
+        }
+      ]
+    },
+    {
+      "name": "Payer",
+      "role": "OBJECT",
+      "description": "The person paying, and the account debited.",
+      "example": "{\"accountId\": \"0123456789\", \"name\": \"Tan Wei Ming\"}",
+      "fields": [
+        {
+          "name": "accountId",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": true,
+          "format": null,
+          "description": "Debit account at the payer bank",
+          "example": null,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "pattern": "^[0-9]{9,14}$",
+          "enumValues": []
+        },
+        {
+          "name": "name",
+          "type": "STRING",
+          "itemType": null,
+          "refPayload": null,
+          "required": false,
+          "format": null,
+          "description": null,
+          "example": null,
+          "minLength": null,
+          "maxLength": 140,
+          "minimum": null,
+          "maximum": null,
+          "pattern": null,
+          "enumValues": []
+        }
+      ]
+    },
+    {
       "name": "Merchant",
       "description": "A merchant registered for SGQR, as returned by merchant-directory.",
       "example": "{\"merchantId\": \"KOPI0001\", \"name\": \"Ah Seng Kopi\", \"uen\": \"201912345K\", \"city\": \"Singapore\", \"mcc\": \"5814\", \"status\": \"ACTIVE\"}",
@@ -115,12 +195,13 @@
             "CLOSED"
           ]
         }
-      ]
+      ],
+      "role": "OBJECT"
     },
     {
       "name": "CreateQrCodeRequest",
       "description": "What a merchant terminal sends to get a dynamic PayNow QR for one sale.",
-      "example": "{\"merchantId\": \"KOPI0001\", \"qrType\": \"PREFILLED\", \"amount\": 4.8, \"currency\": \"SGD\", \"billReference\": \"INV-20261124-0042\", \"expiresInSeconds\": 300}",
+      "example": "{\"merchantId\": \"KOPI0001\", \"qrType\": \"PREFILLED\", \"amount\": {\"value\": 4.8, \"currency\": \"SGD\"}, \"billReference\": \"INV-20261124-0042\", \"expiresInSeconds\": 300}",
       "fields": [
         {
           "name": "merchantId",
@@ -159,37 +240,19 @@
         },
         {
           "name": "amount",
-          "type": "DECIMAL",
+          "type": "OBJECT",
           "itemType": null,
-          "refPayload": null,
+          "refPayload": "Money",
           "required": false,
           "format": null,
-          "description": "Required for PREFILLED; leave empty for AMOUNT_ENTRY",
-          "example": null,
-          "minLength": null,
-          "maxLength": null,
-          "minimum": 0.01,
-          "maximum": 999999.99,
-          "pattern": null,
-          "enumValues": []
-        },
-        {
-          "name": "currency",
-          "type": "STRING",
-          "itemType": null,
-          "refPayload": null,
-          "required": true,
-          "format": null,
-          "description": "ISO 4217 currency; PayNow QR is SGD only",
+          "description": "Required for PREFILLED; leave out for AMOUNT_ENTRY. PayNow QR is SGD only.",
           "example": null,
           "minLength": null,
           "maxLength": null,
           "minimum": null,
           "maximum": null,
           "pattern": null,
-          "enumValues": [
-            "SGD"
-          ]
+          "enumValues": []
         },
         {
           "name": "billReference",
@@ -223,7 +286,8 @@
           "pattern": null,
           "enumValues": []
         }
-      ]
+      ],
+      "role": "STRUCTURE"
     },
     {
       "name": "EmvPayload",
@@ -262,7 +326,8 @@
           "pattern": "^[0-9A-F]{4}$",
           "enumValues": []
         }
-      ]
+      ],
+      "role": "OBJECT"
     },
     {
       "name": "QrCode",
@@ -338,37 +403,19 @@
         },
         {
           "name": "amount",
-          "type": "DECIMAL",
+          "type": "OBJECT",
           "itemType": null,
-          "refPayload": null,
+          "refPayload": "Money",
           "required": false,
           "format": null,
           "description": "Empty for AMOUNT_ENTRY QRs",
           "example": null,
           "minLength": null,
           "maxLength": null,
-          "minimum": 0.01,
-          "maximum": 999999.99,
-          "pattern": null,
-          "enumValues": []
-        },
-        {
-          "name": "currency",
-          "type": "STRING",
-          "itemType": null,
-          "refPayload": null,
-          "required": true,
-          "format": null,
-          "description": "ISO 4217 currency; PayNow QR is SGD only",
-          "example": null,
-          "minLength": null,
-          "maxLength": null,
           "minimum": null,
           "maximum": null,
           "pattern": null,
-          "enumValues": [
-            "SGD"
-          ]
+          "enumValues": []
         },
         {
           "name": "billReference",
@@ -487,12 +534,13 @@
           "pattern": null,
           "enumValues": []
         }
-      ]
+      ],
+      "role": "OBJECT"
     },
     {
       "name": "PaymentRequest",
       "description": "What the payer's banking app sends after scanning a QR.",
-      "example": "{\"qrId\": \"7d1f4c2a-1b3e-4f5a-9c8d-2e6f0a1b3c4d\", \"amount\": 4.8, \"payerAccountId\": \"0123456789\", \"payerName\": \"Tan Wei Ming\"}",
+      "example": "{\"qrId\": \"7d1f4c2a-1b3e-4f5a-9c8d-2e6f0a1b3c4d\", \"amount\": {\"value\": 4.8, \"currency\": \"SGD\"}, \"payer\": {\"accountId\": \"0123456789\", \"name\": \"Tan Wei Ming\"}}",
       "fields": [
         {
           "name": "qrId",
@@ -512,53 +560,38 @@
         },
         {
           "name": "amount",
-          "type": "DECIMAL",
+          "type": "OBJECT",
           "itemType": null,
-          "refPayload": null,
+          "refPayload": "Money",
           "required": false,
           "format": null,
-          "description": "The amount the payer typed: required for AMOUNT_ENTRY QRs; leave empty (or equal to the QR amount) for PREFILLED",
-          "example": null,
-          "minLength": null,
-          "maxLength": null,
-          "minimum": 0.01,
-          "maximum": 999999.99,
-          "pattern": null,
-          "enumValues": []
-        },
-        {
-          "name": "payerAccountId",
-          "type": "STRING",
-          "itemType": null,
-          "refPayload": null,
-          "required": true,
-          "format": null,
-          "description": "Debit account at the payer bank",
+          "description": "What the payer typed: required for AMOUNT_ENTRY QRs; leave out (or equal to the QR amount) for PREFILLED",
           "example": null,
           "minLength": null,
           "maxLength": null,
           "minimum": null,
           "maximum": null,
-          "pattern": "^[0-9]{9,14}$",
+          "pattern": null,
           "enumValues": []
         },
         {
-          "name": "payerName",
-          "type": "STRING",
+          "name": "payer",
+          "type": "OBJECT",
           "itemType": null,
-          "refPayload": null,
-          "required": false,
+          "refPayload": "Payer",
+          "required": true,
           "format": null,
           "description": null,
           "example": null,
           "minLength": null,
-          "maxLength": 140,
+          "maxLength": null,
           "minimum": null,
           "maximum": null,
           "pattern": null,
           "enumValues": []
         }
-      ]
+      ],
+      "role": "STRUCTURE"
     },
     {
       "name": "AccountBalance",
@@ -583,28 +616,12 @@
         },
         {
           "name": "availableBalance",
-          "type": "DECIMAL",
+          "type": "OBJECT",
           "itemType": null,
-          "refPayload": null,
+          "refPayload": "Money",
           "required": true,
           "format": null,
           "description": "Ledger balance minus holds",
-          "example": null,
-          "minLength": null,
-          "maxLength": null,
-          "minimum": null,
-          "maximum": null,
-          "pattern": null,
-          "enumValues": []
-        },
-        {
-          "name": "currency",
-          "type": "STRING",
-          "itemType": null,
-          "refPayload": null,
-          "required": true,
-          "format": null,
-          "description": null,
           "example": null,
           "minLength": null,
           "maxLength": null,
@@ -634,7 +651,8 @@
             "CLOSED"
           ]
         }
-      ]
+      ],
+      "role": "OBJECT"
     },
     {
       "name": "TransferLimits",
@@ -721,7 +739,8 @@
           "pattern": null,
           "enumValues": []
         }
-      ]
+      ],
+      "role": "OBJECT"
     },
     {
       "name": "RiskAssessment",
@@ -764,7 +783,8 @@
             "DECLINE"
           ]
         }
-      ]
+      ],
+      "role": "OBJECT"
     },
     {
       "name": "FastSubmission",
@@ -803,7 +823,8 @@
           "pattern": null,
           "enumValues": []
         }
-      ]
+      ],
+      "role": "OBJECT"
     },
     {
       "name": "Payment",
@@ -843,32 +864,16 @@
           "enumValues": []
         },
         {
-          "name": "payerAccountId",
-          "type": "STRING",
+          "name": "payer",
+          "type": "OBJECT",
           "itemType": null,
-          "refPayload": null,
+          "refPayload": "Payer",
           "required": true,
           "format": null,
           "description": null,
           "example": null,
           "minLength": null,
           "maxLength": null,
-          "minimum": null,
-          "maximum": null,
-          "pattern": null,
-          "enumValues": []
-        },
-        {
-          "name": "payerName",
-          "type": "STRING",
-          "itemType": null,
-          "refPayload": null,
-          "required": false,
-          "format": null,
-          "description": null,
-          "example": null,
-          "minLength": null,
-          "maxLength": 140,
           "minimum": null,
           "maximum": null,
           "pattern": null,
@@ -876,37 +881,19 @@
         },
         {
           "name": "amount",
-          "type": "DECIMAL",
+          "type": "OBJECT",
           "itemType": null,
-          "refPayload": null,
+          "refPayload": "Money",
           "required": false,
           "format": null,
           "description": "Taken from the QR for PREFILLED QRs",
           "example": null,
           "minLength": null,
           "maxLength": null,
-          "minimum": 0.01,
-          "maximum": 999999.99,
-          "pattern": null,
-          "enumValues": []
-        },
-        {
-          "name": "currency",
-          "type": "STRING",
-          "itemType": null,
-          "refPayload": null,
-          "required": true,
-          "format": null,
-          "description": "ISO 4217 currency; PayNow QR is SGD only",
-          "example": null,
-          "minLength": null,
-          "maxLength": null,
           "minimum": null,
           "maximum": null,
           "pattern": null,
-          "enumValues": [
-            "SGD"
-          ]
+          "enumValues": []
         },
         {
           "name": "status",
@@ -1056,7 +1043,8 @@
           "pattern": null,
           "enumValues": []
         }
-      ]
+      ],
+      "role": "STRUCTURE"
     },
     {
       "name": "PaymentReceipt",
@@ -1129,25 +1117,9 @@
         },
         {
           "name": "amount",
-          "type": "DECIMAL",
+          "type": "OBJECT",
           "itemType": null,
-          "refPayload": null,
-          "required": false,
-          "format": null,
-          "description": null,
-          "example": null,
-          "minLength": null,
-          "maxLength": null,
-          "minimum": null,
-          "maximum": null,
-          "pattern": null,
-          "enumValues": []
-        },
-        {
-          "name": "currency",
-          "type": "STRING",
-          "itemType": null,
-          "refPayload": null,
+          "refPayload": "Money",
           "required": true,
           "format": null,
           "description": null,
@@ -1211,7 +1183,8 @@
           "pattern": null,
           "enumValues": []
         }
-      ]
+      ],
+      "role": "STRUCTURE"
     },
     {
       "name": "SettlementResult",
@@ -1301,7 +1274,8 @@
           "pattern": null,
           "enumValues": []
         }
-      ]
+      ],
+      "role": "STRUCTURE"
     },
     {
       "name": "PaymentInitiatedEvent",
@@ -1342,25 +1316,9 @@
         },
         {
           "name": "amount",
-          "type": "DECIMAL",
+          "type": "OBJECT",
           "itemType": null,
-          "refPayload": null,
-          "required": false,
-          "format": null,
-          "description": null,
-          "example": null,
-          "minLength": null,
-          "maxLength": null,
-          "minimum": null,
-          "maximum": null,
-          "pattern": null,
-          "enumValues": []
-        },
-        {
-          "name": "currency",
-          "type": "STRING",
-          "itemType": null,
-          "refPayload": null,
+          "refPayload": "Money",
           "required": true,
           "format": null,
           "description": null,
@@ -1388,7 +1346,8 @@
           "pattern": null,
           "enumValues": []
         }
-      ]
+      ],
+      "role": "STRUCTURE"
     },
     {
       "name": "PaymentCompletedEvent",
@@ -1478,7 +1437,8 @@
           "pattern": null,
           "enumValues": []
         }
-      ]
+      ],
+      "role": "STRUCTURE"
     },
     {
       "name": "PaymentError",
@@ -1533,7 +1493,8 @@
           "pattern": null,
           "enumValues": []
         }
-      ]
+      ],
+      "role": "STRUCTURE"
     }
   ],
   "endpoints": [
@@ -1611,21 +1572,21 @@
                 "message": "Leave the amount empty: the payer enters it"
               },
               {
-                "field": "amount",
+                "field": "amount.value",
                 "kind": "MIN",
                 "value": "0.01",
                 "message": null
               },
               {
-                "field": "amount",
+                "field": "amount.value",
                 "kind": "MAX",
                 "value": "999999.99",
                 "message": null
               },
               {
-                "field": "currency",
+                "field": "amount.currency",
                 "kind": "CUSTOM",
-                "value": "currency == 'SGD'",
+                "value": "isEmpty(amount) or amount.currency == 'SGD'",
                 "message": "PayNow QR supports SGD only"
               },
               {
@@ -1886,22 +1847,34 @@
                 "message": null
               },
               {
-                "field": "amount",
+                "field": "payer.accountId",
+                "kind": "REQUIRED",
+                "value": null,
+                "message": null
+              },
+              {
+                "field": "payer.accountId",
+                "kind": "PATTERN",
+                "value": "^[0-9]{9,14}$",
+                "message": "Not a valid account number"
+              },
+              {
+                "field": "amount.value",
                 "kind": "MIN",
                 "value": "0.01",
                 "message": null
               },
               {
-                "field": "amount",
+                "field": "amount.value",
                 "kind": "MAX",
                 "value": "999999.99",
                 "message": null
               },
               {
-                "field": "payerAccountId",
-                "kind": "PATTERN",
-                "value": "^[0-9]{9,14}$",
-                "message": "Not a valid account number"
+                "field": "amount.currency",
+                "kind": "CUSTOM",
+                "value": "isEmpty(amount) or amount.currency == 'SGD'",
+                "message": "PayNow supports SGD only"
               }
             ],
             "failureStatus": 400
@@ -1918,11 +1891,6 @@
                 "target": "paymentId",
                 "source": null,
                 "expression": "randomUUID()"
-              },
-              {
-                "target": "currency",
-                "source": null,
-                "expression": "'SGD'"
               },
               {
                 "target": "status",
@@ -1967,9 +1935,9 @@
                 "message": "This QR has expired"
               },
               {
-                "field": "qr.currency",
+                "field": "qr.amount.currency",
                 "kind": "CUSTOM",
-                "value": "qr.currency == 'SGD'",
+                "value": "isEmpty(qr.amount) or qr.amount.currency == 'SGD'",
                 "message": "This QR is not a PayNow SGD QR"
               },
               {
@@ -1991,7 +1959,7 @@
               {
                 "field": "amount",
                 "kind": "CUSTOM",
-                "value": "qr.qrType != 'PREFILLED' or isEmpty(amount) or amount == qr.amount",
+                "value": "qr.qrType != 'PREFILLED' or isEmpty(amount) or amount.value == qr.amount.value",
                 "message": "The amount is fixed by this QR; submit it unchanged"
               },
               {
@@ -2026,7 +1994,7 @@
           "config": {
             "serviceName": "core-banking",
             "httpMethod": "GET",
-            "url": "/accounts/{payerAccountId}/balance",
+            "url": "/accounts/{payer.accountId}/balance",
             "responsePayload": "AccountBalance",
             "targetField": "balance",
             "timeoutMs": 1000,
@@ -2046,15 +2014,15 @@
                 "message": "This account cannot be debited"
               },
               {
-                "field": "balance.currency",
+                "field": "balance.availableBalance.currency",
                 "kind": "CUSTOM",
-                "value": "balance.currency == 'SGD'",
+                "value": "balance.availableBalance.currency == 'SGD'",
                 "message": "PayNow debits SGD accounts only"
               },
               {
-                "field": "balance.availableBalance",
+                "field": "balance.availableBalance.value",
                 "kind": "CUSTOM",
-                "value": "balance.availableBalance >= amount",
+                "value": "balance.availableBalance.value >= amount.value",
                 "message": "Insufficient funds"
               }
             ],
@@ -2068,7 +2036,7 @@
           "config": {
             "serviceName": "limits-service",
             "httpMethod": "GET",
-            "url": "/accounts/{payerAccountId}/paynow-limits",
+            "url": "/accounts/{payer.accountId}/paynow-limits",
             "responsePayload": "TransferLimits",
             "targetField": "limits",
             "timeoutMs": 800,
@@ -2082,15 +2050,15 @@
           "config": {
             "checks": [
               {
-                "field": "amount",
+                "field": "amount.value",
                 "kind": "CUSTOM",
-                "value": "amount <= limits.perTransactionLimit",
+                "value": "amount.value <= limits.perTransactionLimit",
                 "message": "The amount is over your per-transaction PayNow limit"
               },
               {
-                "field": "amount",
+                "field": "amount.value",
                 "kind": "CUSTOM",
-                "value": "amount + limits.usedToday <= limits.dailyLimit",
+                "value": "amount.value + limits.usedToday <= limits.dailyLimit",
                 "message": "The amount is over what is left of today's PayNow limit"
               },
               {
@@ -2141,7 +2109,7 @@
             "branches": [
               {
                 "name": "stepUpRequired",
-                "condition": "amount > 3000 or risk.decision == 'REVIEW'",
+                "condition": "amount.value > 3000 or risk.decision == 'REVIEW'",
                 "description": "ask the payer to confirm with 2FA before submitting"
               }
             ],

@@ -9,7 +9,7 @@ import { defaultConfig } from '../lib/rules'
 import { META, renderWithProviders } from './render'
 
 const order: Payload = {
-  id: 'o', projectId: 'p', name: 'Order', fields: [
+  id: 'o', projectId: 'p', name: 'Order', role: 'STRUCTURE', fields: [
     { name: 'total', type: 'DECIMAL', required: true, enumValues: [] },
     { name: 'status', type: 'STRING', required: true, enumValues: [] },
   ],
