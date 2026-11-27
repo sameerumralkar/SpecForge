@@ -1,9 +1,12 @@
 import type { ReactNode } from 'react'
 import { Box, Button, Chip, Stack, Typography } from '@mui/material'
+import { ScreenHelp } from './help/ScreenHelp'
 
 /** Title bar of an editor page with Save / Discard, which are enabled only while there are changes. */
-export function EditorHeader({ title, subtitle, chips, dirty, saving, onSave, onDiscard, actions }: {
+export function EditorHeader({ title, subtitle, chips, dirty, saving, onSave, onDiscard, actions, help }: {
   title: ReactNode
+  /** The screen whose help the "?" opens. */
+  help?: string
   subtitle?: ReactNode
   chips?: ReactNode
   dirty: boolean
@@ -18,6 +21,7 @@ export function EditorHeader({ title, subtitle, chips, dirty, saving, onSave, on
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
             <Typography variant="h6" noWrap sx={{ minWidth: 0 }} title={typeof title === 'string' ? title : undefined}>{title}</Typography>
+            {help && <ScreenHelp screen={help} />}
             {chips}
             {dirty && <Chip label="Unsaved changes" color="warning" variant="outlined" />}
           </Stack>

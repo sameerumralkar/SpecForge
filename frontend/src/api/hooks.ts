@@ -10,6 +10,7 @@ export const keys = {
   endpoints: (projectId: string) => ['projects', projectId, 'endpoints'] as const,
   errorCodes: (projectId: string) => ['projects', projectId, 'error-codes'] as const,
   fieldDefinitions: (projectId: string) => ['projects', projectId, 'field-definitions'] as const,
+  capabilities: (projectId: string) => ['projects', projectId, 'capabilities'] as const,
   rules: (projectId: string, endpointId: string) => ['projects', projectId, 'endpoints', endpointId, 'rules'] as const,
   specs: (projectId: string) => ['projects', projectId, 'specs'] as const,
   code: (projectId: string) => ['projects', projectId, 'code'] as const,
@@ -26,6 +27,12 @@ export const usePayloads = (projectId: string) =>
 export const useEndpoints = (projectId: string) =>
   useQuery({ queryKey: keys.endpoints(projectId), queryFn: () => api.endpoints(projectId) })
 /** The project's error-code inventory; not fetched without a project. */
+export const useCapabilities = (projectId: string | undefined) =>
+  useQuery({ queryKey: keys.capabilities(projectId ?? ''), queryFn: () => api.capabilities(projectId!), enabled: !!projectId })
+export const useCapabilityLevels = (projectId: string | undefined) =>
+  useQuery({ queryKey: [...keys.capabilities(projectId ?? ''), 'levels'], queryFn: () => api.capabilityLevels(projectId!), enabled: !!projectId })
+export const useCapabilityApis = (projectId: string, id: string | null) =>
+  useQuery({ queryKey: [...keys.capabilities(projectId), id, 'apis'], queryFn: () => api.capabilityApis(projectId, id!), enabled: !!id })
 export const useFieldDefinitions = (projectId: string | undefined) =>
   useQuery({ queryKey: keys.fieldDefinitions(projectId ?? ''), queryFn: () => api.fieldDefinitions(projectId!), enabled: !!projectId })
 export const useErrorCodes = (projectId: string | undefined) =>

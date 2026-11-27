@@ -4,6 +4,7 @@ import {
   Box, Button, Card, CircularProgress, IconButton, InputAdornment, Stack, Table, TableBody, TableCell, TableHead, TableRow,
   TextField, Tooltip, Typography,
 } from '@mui/material'
+import { ScreenHelp } from '../components/help/ScreenHelp'
 import AddIcon from '@mui/icons-material/Add'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
@@ -67,7 +68,10 @@ export function FieldInventoryPage() {
     <Box sx={{ p: 3, maxWidth: 1300 }}>
       <Stack direction="row" sx={{ alignItems: 'center', mb: 2 }} spacing={2}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="h5">Field inventory</Typography>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Typography variant="h5">Field inventory</Typography>
+            <ScreenHelp screen="fields" />
+          </Stack>
           <Typography variant="body2" color="text.secondary">
             Ready-made fields with their checks and error codes. When you build an object, drag them from the field inventory panel
             onto its field list: each is copied in, and can then be changed there.

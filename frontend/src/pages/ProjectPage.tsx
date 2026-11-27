@@ -54,7 +54,7 @@ function ProjectSettings({ project }: { project: Project }) {
   return (
     <>
       <UnsavedChangesGuard dirty={dirty} />
-      <EditorHeader title="Project settings" subtitle={project.name} dirty={dirty} onSave={save} onDiscard={() => { reset(); setError(null) }} />
+      <EditorHeader help="overview" title="Project settings" subtitle={project.name} dirty={dirty} onSave={save} onDiscard={() => { reset(); setError(null) }} />
       <Box sx={{ p: 3, maxWidth: 820 }}>
         <ErrorSummary error={error} />
         {errorText(error, 'allowCircularReferences') && <Alert severity="warning" sx={{ mb: 2 }}>{errorText(error, 'allowCircularReferences')}</Alert>}

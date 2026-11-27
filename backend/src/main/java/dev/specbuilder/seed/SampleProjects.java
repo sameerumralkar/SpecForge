@@ -7,6 +7,7 @@ import dev.specbuilder.repository.ProjectRepository;
 import dev.specbuilder.service.EndpointService;
 import dev.specbuilder.service.ErrorCodeService;
 import dev.specbuilder.service.FieldDefinitionService;
+import dev.specbuilder.service.CapabilityService;
 import dev.specbuilder.service.PayloadService;
 import dev.specbuilder.service.ProjectService;
 import dev.specbuilder.service.RuleService;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.*;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,10 +38,12 @@ public class SampleProjects {
     private final RuleService rules;
     private final ErrorCodeService errorCodes;
     private final FieldDefinitionService fieldInventory;
+    private final CapabilityService capabilities;
 
     public SampleProjects(ProjectRepository projectRepository, ProjectService projects, PayloadService payloads,
                           EndpointService endpoints, RuleService rules, ErrorCodeService errorCodes,
-                          FieldDefinitionService fieldInventory) {
+                          FieldDefinitionService fieldInventory, CapabilityService capabilities) {
+        this.capabilities = capabilities;
         this.errorCodes = errorCodes;
         this.fieldInventory = fieldInventory;
         this.projectRepository = projectRepository;
@@ -213,10 +217,33 @@ public class SampleProjects {
                 ErrorLink.rule(saveOrder), ErrorLink.rule(updateStatus));
         code(p, "ORD-021", ErrorCategory.MESSAGING, null, "OrderCreated could not be published", ErrorLink.rule(publishCreated));
 
+        // The capability model: where each API sits in what the business does.
+        Map<String, UUID> api = new HashMap<>();
+        endpoints.list(p).forEach(e -> api.put(e.name(), e.id()));
+        UUID commerce = capability(p, null, "Commerce", "COM", "Selling to customers and fulfilling what they buy.");
+        UUID orders = capability(p, commerce, "Order management", "COM.ORD", "Taking, tracking and completing customer orders.");
+        UUID capture = capability(p, orders, "Order capture", "COM.ORD.CAP", "Accepting orders from customers.");
+        link(p, capability(p, capture, "Place order", "COM.ORD.CAP.01", "Check and store a new order, then announce it."),
+                api.get("createOrder"), api.get("orderCreated"));
+        UUID inquiry = capability(p, orders, "Order inquiry", "COM.ORD.INQ", "Letting customers and staff look orders up.");
+        link(p, inquiry, api.get("getOrder"), api.get("listOrders"));
+        UUID payments = capability(p, commerce, "Payment handling", "COM.PAY", "Reacting to payments made for orders.");
+        link(p, capability(p, payments, "Payment settlement", "COM.PAY.SET", "Mark orders paid when the payment completes."),
+                api.get("handlePaymentCompleted"));
+        capability(p, payments, "Refunds", "COM.PAY.REF", "Not built yet: a gap the capability map makes visible.");
+
         return projects.get(p);
     }
 
     // ---- small builders ----
+
+    private UUID capability(UUID project, UUID parent, String name, String code, String description) {
+        return capabilities.create(project, new CapabilityRequest(name, code, description, parent, null)).id();
+    }
+
+    private void link(UUID project, UUID capability, UUID... apis) {
+        capabilities.setApis(project, capability, new IdList(Arrays.stream(apis).filter(Objects::nonNull).toList()));
+    }
 
     private static final class F {
         String format;

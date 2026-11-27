@@ -1,5 +1,6 @@
 import { useParams } from 'react-router'
-import { Box, Typography } from '@mui/material'
+import { Box, Stack, Typography } from '@mui/material'
+import { ScreenHelp } from '../components/help/ScreenHelp'
 import { SpecPanel } from '../components/SpecPanel'
 import { CodePanel } from '../components/CodePanel'
 import { DiagramPanel } from '../components/DiagramPanel'
@@ -18,7 +19,10 @@ export function OutputPage({ view }: { view: OutputView }) {
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <Box sx={{ px: 3, py: 1.5, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
-        <Typography variant="h6" component="h1">{TEXT[view].title}</Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Typography variant="h6" component="h1">{TEXT[view].title}</Typography>
+          <ScreenHelp screen={view} />
+        </Stack>
         <Typography variant="body2" color="text.secondary">{TEXT[view].subtitle}</Typography>
       </Box>
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>

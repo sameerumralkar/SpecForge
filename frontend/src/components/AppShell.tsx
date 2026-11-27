@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Outlet, useNavigate, useParams } from 'react-router'
-import { Alert, AppBar, Box, Button, ListItemText, Menu, MenuItem, Snackbar, TextField, ToggleButton, Toolbar, Typography } from '@mui/material'
+import { Alert, AppBar, Box, Button, ListItemText, Menu, MenuItem, Snackbar, TextField, ToggleButton, Toolbar, Tooltip, Typography } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import BoltIcon from '@mui/icons-material/Bolt'
 import VerticalSplitIcon from '@mui/icons-material/VerticalSplit'
+import TipsAndUpdatesOutlinedIcon from '@mui/icons-material/TipsAndUpdatesOutlined'
+import { FieldHelpLayer } from './help/FieldHelpLayer'
+import { setFieldHelpOn, useFieldHelpOn } from './help/fieldHelpStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { api, downloads } from '../api/client'
 import { PreviewContext } from '../lib/preview'
@@ -115,6 +118,7 @@ export function AppShell() {
               </Menu>
             </>
           )}
+          <FieldTipsToggle />
           <Button color="inherit" startIcon={<AddIcon />} endIcon={<ArrowDropDownIcon />} onClick={(e) => setMenu(e.currentTarget)}>
             New project
           </Button>
@@ -128,6 +132,7 @@ export function AppShell() {
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <PreviewContext.Provider value={preview}>
           <Outlet />
+          <FieldHelpLayer />
         </PreviewContext.Provider>
       </Box>
       <Snackbar open={!!exporting} message={exporting} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
@@ -137,5 +142,18 @@ export function AppShell() {
       <ImportDialog open={importing} onClose={() => setImporting(false)} onImported={(id) => navigate(`/projects/${id}`)} />
       <ProjectDialog open={creating} onClose={() => setCreating(false)} onCreated={(p) => navigate(`/projects/${p.id}`)} />
     </Box>
+  )
+}
+
+/** Turns the field tips (help shown when you hover over or tab into a field) on and off. */
+function FieldTipsToggle() {
+  const on = useFieldHelpOn()
+  return (
+    <Tooltip title={on ? 'Field tips are on: hover over any field to see what it is for. Click to turn them off.' : 'Field tips are off. Click to show what each field is for when you hover over it.'}>
+      <ToggleButton value="tips" selected={on} onChange={() => setFieldHelpOn(!on)} size="small" aria-label="Field tips"
+        sx={{ color: 'inherit', borderColor: 'rgba(255,255,255,0.4)', textTransform: 'none', py: 0.25, '&.Mui-selected': { color: 'inherit', bgcolor: 'rgba(255,255,255,0.18)' } }}>
+        <TipsAndUpdatesOutlinedIcon fontSize="small" sx={{ mr: 0.75 }} />Field tips
+      </ToggleButton>
+    </Tooltip>
   )
 }

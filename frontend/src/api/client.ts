@@ -1,6 +1,7 @@
 import type {
   Endpoint, EndpointRequest, Meta, Payload, PayloadRequest, PayloadUsage, Project, ProjectRequest,
   CodeView, DiagramsView, ErrorCode, Field, FieldDefinition, ErrorCodeRequest, ErrorLink, GenerationDiff, ImportResult, Rule, RuleChain, RuleRequest, Snapshot, SnapshotKind, SpecsView,
+  Capability, CapabilityApi, CapabilityRequest,
 } from './types'
 
 export interface FieldError {
@@ -70,6 +71,19 @@ export const api = {
   duplicatePayload: (projectId: string, id: string) => request<Payload>('POST', `${p(projectId)}/payloads/${id}/duplicate`),
   payloadUsages: (projectId: string, id: string) => request<PayloadUsage[]>('GET', `${p(projectId)}/payloads/${id}/usages`),
 
+  capabilityLevels: (projectId: string) => request<{ levels: string[] }>('GET', `${p(projectId)}/capability-levels`),
+  setCapabilityLevels: (projectId: string, levels: string[]) =>
+    request<{ levels: string[] }>('PUT', `${p(projectId)}/capability-levels`, { levels }),
+  capabilities: (projectId: string) => request<Capability[]>('GET', `${p(projectId)}/capabilities`),
+  createCapability: (projectId: string, body: CapabilityRequest) => request<Capability>('POST', `${p(projectId)}/capabilities`, body),
+  updateCapability: (projectId: string, id: string, body: CapabilityRequest) =>
+    request<Capability>('PUT', `${p(projectId)}/capabilities/${id}`, body),
+  deleteCapability: (projectId: string, id: string) => request<void>('DELETE', `${p(projectId)}/capabilities/${id}`),
+  capabilityApis: (projectId: string, id: string) => request<CapabilityApi[]>('GET', `${p(projectId)}/capabilities/${id}/apis`),
+  setCapabilityApis: (projectId: string, id: string, ids: string[]) =>
+    request<Capability>('PUT', `${p(projectId)}/capabilities/${id}/apis`, { ids }),
+  setEndpointCapabilities: (projectId: string, endpointId: string, ids: string[]) =>
+    request<Capability[]>('PUT', `${p(projectId)}/endpoints/${endpointId}/capabilities`, { ids }),
   fieldDefinitions: (projectId: string) => request<FieldDefinition[]>('GET', `${p(projectId)}/field-definitions`),
   createFieldDefinition: (projectId: string, body: Field) => request<FieldDefinition>('POST', `${p(projectId)}/field-definitions`, body),
   updateFieldDefinition: (projectId: string, id: string, body: Field) =>

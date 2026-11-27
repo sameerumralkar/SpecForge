@@ -79,6 +79,7 @@ function PayloadPageContent({ projectId, payload, payloads }: { projectId: strin
     <>
       <UnsavedChangesGuard dirty={dirty} />
       <EditorHeader
+        help="payload"
         title={payload.name}
         subtitle={payload.role === 'OBJECT' ? 'Inventory object' : 'Structure'}
         dirty={dirty}

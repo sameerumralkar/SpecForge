@@ -12,6 +12,7 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree'
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import ReportOutlinedIcon from '@mui/icons-material/ReportOutlined'
 import ShortTextIcon from '@mui/icons-material/ShortText'
+import HubOutlinedIcon from '@mui/icons-material/HubOutlined'
 import { ApiError, api } from '../api/client'
 import { useEndpoints, usePayloads, useProject, useRefreshProject } from '../api/hooks'
 import type { Endpoint, Payload, PayloadUsage } from '../api/types'
@@ -27,6 +28,7 @@ type Target = { kind: 'endpoint'; item: Endpoint } | { kind: 'payload'; item: Pa
 
 const MENU = [
   { label: 'Overview & settings', path: '', icon: <SettingsIcon fontSize="small" /> },
+  { label: 'Capabilities', path: 'capabilities', icon: <HubOutlinedIcon fontSize="small" /> },
   { label: 'Field inventory', path: 'fields', icon: <ShortTextIcon fontSize="small" /> },
   { label: 'Object inventory', path: 'inventory', icon: <Inventory2OutlinedIcon fontSize="small" /> },
   { label: 'Error codes', path: 'errors', icon: <ReportOutlinedIcon fontSize="small" /> },

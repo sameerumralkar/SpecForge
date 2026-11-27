@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { Badge, Box, CircularProgress, IconButton, Tab, Tabs, Tooltip, Typography } from '@mui/material'
+import { Badge, Box, CircularProgress, IconButton, Stack, Tab, Tabs, Tooltip, Typography } from '@mui/material'
 import { ApiError, api } from '../api/client'
 import { useEndpoints, usePayloads, useProject, useRefreshProject } from '../api/hooks'
 import type { Endpoint, Payload, Project } from '../api/types'
@@ -13,6 +13,7 @@ import { MethodChip } from '../components/MethodChip'
 import { EndpointDefinition } from '../editors/EndpointDefinition'
 import { toEndpointRequest } from '../lib/mappers'
 import { RequestResponse } from '../editors/RequestResponse'
+import { EndpointCapabilities } from '../components/capabilities/EndpointCapabilities'
 import { InventoryPalette } from '../components/inventory/InventoryPalette'
 import { ObjectDndProvider } from '../components/inventory/ObjectDnd'
 import { RulesEditor } from '../editors/RulesEditor'
@@ -102,6 +103,7 @@ function EndpointEditor({ endpoint, endpoints, payloads, project }: {
     <>
       <UnsavedChangesGuard dirty={dirty} />
       <EditorHeader
+        help={`endpoint-${tab}`}
         title={endpoint.name}
         chips={<MethodChip endpoint={endpoint} />}
         subtitle={endpoint.kind === 'REST'
@@ -132,7 +134,12 @@ function EndpointEditor({ endpoint, endpoints, payloads, project }: {
       </Box>
       <Box sx={{ p: 3, maxWidth: tab === 'rules' || tab === 'diagrams' ? undefined : tab === 'io' ? 1400 : 1100 }}>
         {tab !== 'rules' && <ErrorSummary error={error} />}
-        {tab === 'definition' && <EndpointDefinition value={draft} onChange={setDraft} allTags={allTags} error={error} />}
+        {tab === 'definition' && (
+          <Stack spacing={3}>
+            <EndpointDefinition value={draft} onChange={setDraft} allTags={allTags} error={error} />
+            <EndpointCapabilities projectId={project.id} endpointId={endpoint.id} />
+          </Stack>
+        )}
         {tab === 'io' && (
           <ObjectDndProvider>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 270px', gap: 3, alignItems: 'start' }}>

@@ -13,7 +13,7 @@ export function ProjectLayout() {
   const endpointMatch = useMatch('/projects/:projectId/endpoints/:endpointId/*')
   const endpoints = useEndpoints(projectId!)
   const { pathname } = useLocation()
-  const onOutputPage = /^\/projects\/[^/]+\/(spec|code|diagrams|inventory|fields|errors)\/?$/.test(pathname)
+  const onOutputPage = /^\/projects\/[^/]+\/(spec|code|diagrams|inventory|fields|errors|capabilities)\/?$/.test(pathname)
   const focused = endpoints.data?.find((e) => e.id === endpointMatch?.params.endpointId)
   const [width, setWidth] = useState(() => Number(localStorage.getItem('preview-width')) || 520)
   const resize = (w: number) => {

@@ -3,6 +3,8 @@ package dev.specbuilder.domain;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -31,6 +33,11 @@ public class Project {
     @Column(name = "allow_circular_references", nullable = false)
     private boolean allowCircularReferences;
 
+    /** The names of capability levels L1 to L8; empty means the defaults. */
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "capability_levels", length = 2000)
+    private List<String> capabilityLevels = new ArrayList<>();
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -44,6 +51,10 @@ public class Project {
     }
 
     /** Marks the project as changed; called whenever anything inside it changes. */
+    public List<String> getCapabilityLevels() { return capabilityLevels == null ? List.of() : capabilityLevels; }
+
+    public void setCapabilityLevels(List<String> levels) { this.capabilityLevels = new ArrayList<>(levels); }
+
     public void touch() {
         updatedAt = Instant.now();
     }

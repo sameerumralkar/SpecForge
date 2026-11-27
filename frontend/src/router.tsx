@@ -9,6 +9,7 @@ import { OutputPage } from './pages/OutputPage'
 import { InventoryPage } from './pages/InventoryPage'
 import { ErrorCodesPage } from './pages/ErrorCodesPage'
 import { FieldInventoryPage } from './pages/FieldInventoryPage'
+import { CapabilitiesPage } from './pages/CapabilitiesPage'
 
 export const routes = [
   {
@@ -26,6 +27,7 @@ export const routes = [
           { path: 'inventory', element: <InventoryPage /> },
           { path: 'errors', element: <ErrorCodesPage /> },
           { path: 'fields', element: <FieldInventoryPage /> },
+          { path: 'capabilities', element: <CapabilitiesPage /> },
           { path: 'spec', element: <OutputPage view="spec" /> },
           { path: 'code', element: <OutputPage view="code" /> },
           { path: 'diagrams', element: <OutputPage view="diagrams" /> },

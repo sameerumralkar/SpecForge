@@ -89,11 +89,13 @@ class ImportExportApiTest extends ApiTestSupport {
                 .isEqualTo(comparable(get("/api/projects/" + p + "/export").json()));
     }
 
-    /** What a spec can carry: the export without rules, styles, project settings and the field inventory. */
+    /** What a spec can carry: the export without rules, styles, project settings, the field inventory and capabilities. */
     private static JsonNode comparable(JsonNode export) {
         ObjectNode copy = (ObjectNode) export.deepCopy();
         copy.remove("project");
         copy.remove("fieldInventory");
+        copy.remove("capabilities");
+        copy.remove("capabilityLevels");
         for (JsonNode payload : copy.get("payloads")) {
             if (payload.hasNonNull("example")) {
                 ((ObjectNode) payload).put("example", JSON.readTree(payload.get("example").asString()).toString());

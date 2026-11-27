@@ -4,6 +4,7 @@ import {
   Box, Button, Card, CardHeader, Chip, CircularProgress, IconButton, InputAdornment, Link, Stack, Table, TableBody, TableCell,
   TableHead, TableRow, TextField, Tooltip, Typography,
 } from '@mui/material'
+import { ScreenHelp } from '../components/help/ScreenHelp'
 import AddIcon from '@mui/icons-material/Add'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
@@ -139,7 +140,10 @@ export function InventoryPage() {
     <Box sx={{ p: 3, maxWidth: 1300 }}>
       <Stack direction="row" sx={{ alignItems: 'center', mb: 2 }} spacing={2}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="h5">Object inventory</Typography>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Typography variant="h5">Object inventory</Typography>
+            <ScreenHelp screen="inventory" />
+          </Stack>
           <Typography variant="body2" color="text.secondary">
             Reusable building blocks. Drag them from the inventory panel into a payload's fields, a request or response body, or a message.
           </Typography>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material'
+import { ScreenHelp } from '../components/help/ScreenHelp'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { keys, useProjects } from '../api/hooks'
@@ -34,7 +35,10 @@ export function HomePage() {
 
   return (
     <Box sx={{ m: 'auto', textAlign: 'center' }}>
-      <Typography variant="h5" gutterBottom>No projects yet</Typography>
+      <Stack direction="row" spacing={1} sx={{ justifyContent: 'center', alignItems: 'center', mb: 1 }}>
+        <Typography variant="h5">No projects yet</Typography>
+        <ScreenHelp screen="home" />
+      </Stack>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
         Start from the Order Service sample, or from an empty project.
       </Typography>

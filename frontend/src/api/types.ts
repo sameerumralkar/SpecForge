@@ -304,3 +304,45 @@ export interface GenerationDiff {
   baseline: Snapshot
   files: FileChange[]
 }
+
+// ---------------------------------------------------------------- functional capabilities (L1 to L8)
+
+export interface Capability {
+  id: string
+  projectId: string
+  parentId: string | null
+  level: number
+  levelName: string
+  position: number
+  name: string
+  code: string | null
+  description: string | null
+  /** Names from the L1 capability down to this one. */
+  path: string[]
+  /** APIs linked to this capability itself. */
+  endpointIds: string[]
+  /** Its API inventory: its own APIs plus everything linked below it. */
+  apiCount: number
+  childCount: number
+}
+
+export interface CapabilityRequest {
+  name: string
+  code?: string | null
+  description?: string | null
+  parentId?: string | null
+  position?: number | null
+}
+
+export interface CapabilityApi {
+  endpointId: string
+  name: string
+  kind: EndpointKind
+  httpMethod: HttpMethod | null
+  path: string | null
+  channel: string | null
+  operation: AsyncOperation | null
+  summary: string | null
+  direct: boolean
+  via: { capabilityId: string; name: string; level: number }[]
+}

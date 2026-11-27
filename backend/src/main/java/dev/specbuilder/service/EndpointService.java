@@ -33,7 +33,11 @@ public class EndpointService {
     private final EndpointRepository endpoints;
     private final PayloadRepository payloads;
 
-    public EndpointService(ProjectService projectService, EndpointRepository endpoints, PayloadRepository payloads) {
+    private final dev.specbuilder.repository.CapabilityRepository capabilities;
+
+    public EndpointService(ProjectService projectService, EndpointRepository endpoints, PayloadRepository payloads,
+                           dev.specbuilder.repository.CapabilityRepository capabilities) {
+        this.capabilities = capabilities;
         this.projectService = projectService;
         this.endpoints = endpoints;
         this.payloads = payloads;
@@ -122,6 +126,10 @@ public class EndpointService {
         }
         copy.renumberRules();
         endpoints.save(copy);
+        // The copy realises the same capabilities as the original.
+        capabilities.findByProjectId(projectId).stream()
+                .filter(c -> c.getEndpointIds().contains(source.getId()))
+                .forEach(c -> c.getEndpointIds().add(copy.getId()));
         project.touch();
         return Views.endpoint(copy);
     }

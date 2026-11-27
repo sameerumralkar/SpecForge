@@ -7,6 +7,7 @@ import dev.specbuilder.repository.ProjectRepository;
 import dev.specbuilder.service.EndpointService;
 import dev.specbuilder.service.ErrorCodeService;
 import dev.specbuilder.service.FieldDefinitionService;
+import dev.specbuilder.service.CapabilityService;
 import dev.specbuilder.service.PayloadService;
 import dev.specbuilder.service.ProjectService;
 import dev.specbuilder.service.RuleService;
@@ -33,10 +34,12 @@ public class ProjectImportExportService {
     private final RuleService rules;
     private final ErrorCodeService errorCodes;
     private final FieldDefinitionService fieldDefinitions;
+    private final CapabilityService capabilities;
 
     public ProjectImportExportService(ProjectService projects, ProjectRepository projectRepository, PayloadService payloads,
                                       EndpointService endpoints, RuleService rules, ErrorCodeService errorCodes,
-                                      FieldDefinitionService fieldDefinitions) {
+                                      FieldDefinitionService fieldDefinitions, CapabilityService capabilities) {
+        this.capabilities = capabilities;
         this.errorCodes = errorCodes;
         this.fieldDefinitions = fieldDefinitions;
         this.projects = projects;
@@ -60,6 +63,10 @@ public class ProjectImportExportService {
 
         List<PayloadData> payloadData = payloadViews.stream().map(v -> new PayloadData(v.name(), v.description(), v.example(),
                 v.fields().stream().map(f -> fieldData(f, codeNames)).toList(), v.role())).toList();
+        List<String> levels = capabilities.levels(projectId).levels();
+        Map<UUID, String> endpointNames = new HashMap<>();
+        endpoints.list(projectId).forEach(e -> endpointNames.put(e.id(), e.name()));
+        List<CapabilityData> capabilityTree = capabilityTree(capabilities.list(projectId), null, endpointNames);
         List<FieldData> fieldInventory = fieldDefinitions.list(projectId).stream().map(d -> fieldData(d.field(), codeNames)).toList();
 
         List<EndpointData> endpointData = endpoints.list(projectId).stream()
@@ -78,7 +85,22 @@ public class ProjectImportExportService {
                         p.allowCircularReferences()),
                 payloadData, endpointData,
                 codeViews.stream().map(c -> new ErrorCodeData(c.code(), c.message(), c.httpStatus(), c.category(), c.description())).toList(),
-                fieldInventory.isEmpty() ? null : fieldInventory);
+                fieldInventory.isEmpty() ? null : fieldInventory,
+                levels.equals(CapabilityService.DEFAULT_LEVELS) ? null : levels,
+                capabilityTree.isEmpty() ? null : capabilityTree);
+    }
+
+    /** The capabilities below {@code parentId} (null: the L1 ones), nested. */
+    private static List<CapabilityData> capabilityTree(List<CapabilityView> all, UUID parentId, Map<UUID, String> endpointNames) {
+        return all.stream().filter(c -> Objects.equals(c.parentId(), parentId))
+                .map(c -> new CapabilityData(c.name(), c.code(), c.description(),
+                        c.endpointIds().stream().map(endpointNames::get).filter(Objects::nonNull).toList(),
+                        nullIfEmpty(capabilityTree(all, c.id(), endpointNames))))
+                .toList();
+    }
+
+    private static <T> List<T> nullIfEmpty(List<T> list) {
+        return list.isEmpty() ? null : list;
     }
 
     private static FieldData fieldData(FieldDto f, Map<UUID, String> codeNames) {
@@ -257,7 +279,31 @@ public class ProjectImportExportService {
                 prefixed(ruleAt, () -> rules.create(projectId, endpointId, new RuleRequest(r.type(), r.name(), r.condition(), config, null, ruleCodes)));
             }
         }
+        if (data.capabilityLevels() != null && !data.capabilityLevels().isEmpty()) {
+            prefixed("capabilityLevels", () -> capabilities.setLevels(projectId, new CapabilityLevels(data.capabilityLevels())));
+        }
+        Map<String, UUID> endpointIds = new HashMap<>();
+        endpoints.list(projectId).forEach(e -> endpointIds.put(e.name(), e.id()));
+        importCapabilities(projectId, data.capabilities(), null, "capabilities", endpointIds);
         return projects.get(projectId);
+    }
+
+    private void importCapabilities(UUID projectId, List<CapabilityData> list, UUID parentId, String at, Map<String, UUID> endpointIds) {
+        if (list == null) return;
+        for (int i = 0; i < list.size(); i++) {
+            CapabilityData c = list.get(i);
+            String here = at + "[" + i + "]";
+            UUID id = prefixed(here, () -> capabilities.create(projectId, new CapabilityRequest(c.name(), c.code(), c.description(), parentId, null))).id();
+            List<UUID> apis = new ArrayList<>();
+            List<String> names = c.apis() == null ? List.of() : c.apis();
+            for (int j = 0; j < names.size(); j++) {
+                UUID api = endpointIds.get(names.get(j));
+                if (api == null) throw ValidationErrors.single(here + ".apis[" + j + "]", "refers to API '" + names.get(j) + "', which is not in the file");
+                apis.add(api);
+            }
+            if (!apis.isEmpty()) capabilities.setApis(projectId, id, new IdList(apis));
+            importCapabilities(projectId, c.children(), id, here + ".children", endpointIds);
+        }
     }
 
     /** "targetPayload": "Order" → "targetPayloadId": "&lt;uuid&gt;". */

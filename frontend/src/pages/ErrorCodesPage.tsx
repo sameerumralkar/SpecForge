@@ -4,6 +4,7 @@ import {
   Box, Button, Card, Chip, CircularProgress, IconButton, InputAdornment, Stack, Table, TableBody, TableCell, TableHead,
   TableRow, TextField, Tooltip, Typography,
 } from '@mui/material'
+import { ScreenHelp } from '../components/help/ScreenHelp'
 import AddIcon from '@mui/icons-material/Add'
 import AddLinkIcon from '@mui/icons-material/AddLink'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
@@ -65,7 +66,10 @@ export function ErrorCodesPage() {
     <Box sx={{ p: 3, maxWidth: 1400 }}>
       <Stack direction="row" sx={{ alignItems: 'center', mb: 2 }} spacing={2}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="h5">Error codes</Typography>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Typography variant="h5">Error codes</Typography>
+            <ScreenHelp screen="errors" />
+          </Stack>
           <Typography variant="body2" color="text.secondary">
             The errors the APIs can answer with. Link a code to fields (checks on them fail with it) or to processing rules.
             Generated code returns the code in the problem response; the specs list it as <code>x-error-codes</code>.

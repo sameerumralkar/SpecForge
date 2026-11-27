@@ -11,21 +11,22 @@ This guide is task by task. For the technical reference (the model, the generate
 **Contents**
 
 1. [Start SpecForge](#1-start-specforge)
-2. [A quick tour](#2-a-quick-tour)
+2. [A quick tour](#2-a-quick-tour), and [help on every screen](#help-on-every-screen)
 3. [Create a project](#3-create-a-project)
 4. [Build the field inventory](#4-build-the-field-inventory)
 5. [Build objects and structures](#5-build-objects-and-structures)
 6. [Create endpoints](#6-create-endpoints)
 7. [Add processing rules](#7-add-processing-rules)
-8. [Manage error codes](#8-manage-error-codes)
-9. [Check the API spec](#9-check-the-api-spec)
-10. [Generate code](#10-generate-code)
-11. [Diagrams](#11-diagrams)
-12. [Compare with earlier output](#12-compare-with-earlier-output)
-13. [Import and export](#13-import-and-export)
-14. [Reference: expressions](#14-reference-expressions)
-15. [Reference: rule types](#15-reference-rule-types)
-16. [Tips and troubleshooting](#16-tips-and-troubleshooting)
+8. [Map capabilities](#8-map-capabilities)
+9. [Manage error codes](#9-manage-error-codes)
+10. [Check the API spec](#10-check-the-api-spec)
+11. [Generate code](#11-generate-code)
+12. [Diagrams](#12-diagrams)
+13. [Compare with earlier output](#13-compare-with-earlier-output)
+14. [Import and export](#14-import-and-export)
+15. [Reference: expressions](#15-reference-expressions)
+16. [Reference: rule types](#16-reference-rule-types)
+17. [Tips and troubleshooting](#17-tips-and-troubleshooting)
 
 ---
 
@@ -54,6 +55,7 @@ survive restarts. To use PostgreSQL instead, run `docker compose up -d` and star
   | Page | What it is for |
   |---|---|
   | **Overview & settings** | name, base Java package, version, implementation style, export, delete |
+  | **Capabilities** | your functional capability model (L1 to L8) and the APIs that realise each capability |
   | **Field inventory** | reusable plain fields (ids, amounts, currencies, e-mails…) |
   | **Object inventory** | reusable objects built from fields (Money, Address, Customer…) |
   | **Error codes** | every error the API can answer with, and where each is used |
@@ -67,6 +69,15 @@ survive restarts. To use PostgreSQL instead, run `docker compose up -d` and star
   before you leave a page with unsaved edits. Validation errors appear next to the field they are about,
   and in a list at the top.
 
+### Help on every screen
+
+- **The ? next to each screen's title:**
+  - hover over it for a one-line description of the screen;
+  - click it for a panel explaining what the screen is, what you can do there, and tips.
+- **Field tips:** hover over any field, or tab into it, to see what it is for. For example, hovering over
+  **Pattern (regex)** explains that the whole value must match the expression. The **Field tips** button in
+  the top bar turns them off and on, and your choice is remembered in this browser.
+
 ## 3. Create a project
 
 **New project** (top bar) offers three ways in:
@@ -76,7 +87,7 @@ survive restarts. To use PostgreSQL instead, run `docker compose up -d` and star
 - **Copy of the Order Service sample:** a complete example with REST and Kafka endpoints, rules, error codes
   and inventories. It's a good place to look around.
 - **Import from files…:** start from an OpenAPI or AsyncAPI file, or from a SpecForge project export (see
-  [Import and export](#13-import-and-export)). The SGQR PayNow example is in
+  [Import and export](#14-import-and-export)). The SGQR PayNow example is in
   `examples/sgqr-paynow-payments.specbuilder.json`.
 
 Settings live under **Overview & settings**. **Allow circular references** lets payloads refer to each
@@ -187,7 +198,7 @@ The project sets the default, and each endpoint can override it.
 Rules are the steps an endpoint runs, in order. Open the endpoint's **Processing rules** tab and choose
 **Add rule**.
 
-1. Pick the **type** (see [Rule types](#15-reference-rule-types)) and give the rule a **name** such as
+1. Pick the **type** (see [Rule types](#16-reference-rule-types)) and give the rule a **name** such as
    "Check the balance".
 2. Optionally set a **condition**, e.g. `amount.value > 3000`. The rule then runs only when the condition is
    true.
@@ -204,7 +215,43 @@ fixed.
 Field paths use dots for nested objects and `[]` for list items: `payer.accountId`, `items[].quantity`.
 A single name can also be one of the endpoint's parameters, such as `orderId`.
 
-## 8. Manage error codes
+## 8. Map capabilities
+
+A **functional capability** is something the business does: "Payments", "Card payments", "Issue a
+refund". The **Capabilities** page holds your capability model as a tree of up to eight levels. **L1** is
+the broadest level, such as a business domain, and **L8** the most detailed, such as a task. You can also
+link each capability to the APIs (endpoints) that realise it.
+
+**Build the tree**
+1. Open **Capabilities** and choose **New L1 capability**. Give it a **name**, and optionally a **code**
+   from your capability model (e.g. `PAY.02`) and a **description**.
+2. Select it in the **Capability map** on the left, and choose **Add L2 capability**. Repeat at each level,
+   down to L8.
+3. To rearrange the tree:
+   - **Edit** a capability and change its **parent capability** to move it. Everything below it moves too,
+     and the levels adjust.
+   - Use the arrows to reorder capabilities at the same level.
+   - **Delete** removes a capability and everything below it. The APIs stay.
+4. **Level names:** call the eight levels what your organisation calls them. The defaults are Business
+   domain, Capability area, Capability, Sub-capability, Function, Process, Activity and Task.
+
+**Link the APIs.** Either:
+- select a capability and choose **Link APIs…**, then tick the APIs that realise it; or
+- open an API's **Definition** tab and pick its **Linked capabilities**. This saves straight away.
+
+**The API inventory at each level.** Select any capability to see its **API inventory**: the APIs linked to
+it, plus every API linked to a capability below it. An L1 capability therefore lists everything that serves
+that domain. Each row says where the API is linked: **this capability**, or a chip such as "L3 Capture".
+Click the chip to go there.
+
+**Find gaps:**
+- the **Overview** at the top of the map lists the APIs that are **not mapped** to any capability yet;
+- a capability with **0** APIs is something the business does that no API supports yet.
+
+Capabilities, their links and the level names are part of the project export, so they travel with the
+project.
+
+## 9. Manage error codes
 
 The **Error codes** page is the inventory of every error your API can answer with.
 
@@ -246,7 +293,7 @@ the rule's first code.
 The codes appear in the specs as `x-error-codes`, and in the generated code as an `ErrorCatalog` and in
 every error response: `{"status": 422, "detail": "Insufficient funds", "code": "PAY-010"}`.
 
-## 9. Check the API spec
+## 10. Check the API spec
 
 **API spec** (left menu) shows the generated **OpenAPI 3.1** (REST endpoints) and **AsyncAPI 3.0** (async
 endpoints) as YAML or JSON. **Preview → Spec** shows the same beside the editor, scrolled to the endpoint you
@@ -259,7 +306,7 @@ the spec, with swagger-parser (OpenAPI), and by resolving every `$ref`.
 
 **Download:** **Generate → Spec** downloads both documents as a zip.
 
-## 10. Generate code
+## 11. Generate code
 
 **Generated code** (left menu, or **Preview → Code**) shows the generated Maven project file by file,
 opened at the endpoint you are editing. **Generate → Code** downloads it as a zip once nothing blocks it.
@@ -280,7 +327,7 @@ It contains:
 A `README` in the zip lists the TODOs left for you, such as the business logic behind a CUSTOM check, and
 real URLs and credentials.
 
-## 11. Diagrams
+## 12. Diagrams
 
 **Diagrams** draws, for every endpoint, a **sequence diagram** (the steps, branches, retries and every error
 exit) and a **class diagram**, plus an overview.
@@ -292,7 +339,7 @@ exit) and a **class diagram**, plus an overview.
 
 The diagrams use the same names as the generated code, so they match it.
 
-## 12. Compare with earlier output
+## 13. Compare with earlier output
 
 Every download of the code or spec zip saves a **snapshot**, and **Save snapshot** saves one on demand. The
 last 10 of each kind are kept.
@@ -305,10 +352,10 @@ last 10 of each kind are kept.
 
 Use it to see exactly what a design change does to the code before you hand it to developers.
 
-## 13. Import and export
+## 14. Import and export
 
 **Export:** **Overview & settings → Export project (JSON)** saves the whole project as readable JSON:
-settings, inventories, payloads, endpoints, rules and error codes. Everything is referred to by name, so
+settings, inventories, payloads, endpoints, rules, error codes and capabilities. Everything is referred to by name, so
 the file can go in Git, be reviewed in a pull request, and be imported anywhere.
 
 **Import:** **New project → Import from files…** accepts:
@@ -324,7 +371,7 @@ the file can go in Git, be reviewed in a pull request, and be imported anywhere.
 
 An import either succeeds completely or creates nothing. Each error names the part of the file it is about.
 
-## 14. Reference: expressions
+## 15. Reference: expressions
 
 Conditions, branch conditions, mapping expressions and CUSTOM checks share one syntax.
 
@@ -346,7 +393,7 @@ Examples:
 A syntax error (such as `=` instead of `==`) blocks the save and shows the position. A field that doesn't
 exist shows as a warning instead.
 
-## 15. Reference: rule types
+## 16. Reference: rule types
 
 | Type | What it does | Main settings |
 |---|---|---|
@@ -359,7 +406,7 @@ exist shows as a warning instead.
 | **Split / aggregate** | Processes each item of a list, then combines the results | list field, parallel, aggregation (collect, sum, count, none) |
 | **Error handling** | Retries, falls back, or dead-letters failures of one step or the whole chain | which errors, target rule, retry (attempts, back-off), fallback (error or default response), dead-letter destination |
 
-## 16. Tips and troubleshooting
+## 17. Tips and troubleshooting
 
 **Tips**
 - **Start from the inventories.** Define the fields first, then the objects built from them, then the

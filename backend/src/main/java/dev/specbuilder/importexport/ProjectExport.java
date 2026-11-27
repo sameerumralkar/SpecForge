@@ -11,18 +11,32 @@ import java.util.List;
  * A whole project as one portable JSON document. Payloads are referred to by name everywhere
  * (fields, bodies, rule configs), so the file reads well and imports into any instance.
  * In rule configs, a "...PayloadId" setting becomes "...Payload" holding the payload's name.
- * Error codes are referred to by their code. {@code fieldInventory} holds the reusable field definitions.
+ * Error codes are referred to by their code. {@code fieldInventory} holds the reusable field definitions;
+ * {@code capabilities} the capability tree, and {@code capabilityLevels} the level names if not the defaults.
  */
 public record ProjectExport(String format, Integer version, ProjectData project, List<PayloadData> payloads,
-                            List<EndpointData> endpoints, List<ErrorCodeData> errorCodes, List<FieldData> fieldInventory) {
+                            List<EndpointData> endpoints, List<ErrorCodeData> errorCodes, List<FieldData> fieldInventory,
+                            List<String> capabilityLevels, List<CapabilityData> capabilities) {
+
+    public ProjectExport(String format, Integer version, ProjectData project, List<PayloadData> payloads, List<EndpointData> endpoints,
+                         List<ErrorCodeData> errorCodes, List<FieldData> fieldInventory) {
+        this(format, version, project, payloads, endpoints, errorCodes, fieldInventory, null, null);
+    }
 
     public ProjectExport(String format, Integer version, ProjectData project, List<PayloadData> payloads, List<EndpointData> endpoints) {
-        this(format, version, project, payloads, endpoints, null, null);
+        this(format, version, project, payloads, endpoints, null, null, null, null);
     }
 
     public ProjectExport(String format, Integer version, ProjectData project, List<PayloadData> payloads, List<EndpointData> endpoints,
                          List<ErrorCodeData> errorCodes) {
-        this(format, version, project, payloads, endpoints, errorCodes, null);
+        this(format, version, project, payloads, endpoints, errorCodes, null, null, null);
+    }
+
+    /**
+     * A functional capability, with the capabilities below it nested in {@code children} (up to eight levels)
+     * and the APIs linked to it by endpoint name.
+     */
+    public record CapabilityData(String name, String code, String description, List<String> apis, List<CapabilityData> children) {
     }
 
     /** An entry of the error-code inventory. Fields, rules and checks refer to it by {@code code}. */

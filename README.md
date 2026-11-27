@@ -5,6 +5,9 @@ code and architecture diagrams.
 
 **Status: all six phases are done.** The app covers:
 
+- a functional capability model (L1 to L8) with the APIs linked to each capability, and the API inventory at
+  every level;
+- context help on every screen (a ? beside each title) and field tips on hover;
 - the editor, with a field inventory of reusable fields you drag into objects, and an object inventory of reusable
   building blocks you drag into requests and responses;
 - generation of specs (OpenAPI 3.1 / AsyncAPI 3.0, validated), Java code (implementation classes and Camel
@@ -26,8 +29,8 @@ cd frontend && npm install && npm run dev  # UI on http://localhost:5173 (calls 
 Tests:
 
 ```bash
-cd backend && mvn test        # 144 tests; see the notes below
-cd frontend && npm test       # 58 component and unit tests (Vitest + Testing Library)
+cd backend && mvn test        # 148 tests; see the notes below
+cd frontend && npm test       # 68 component and unit tests (Vitest + Testing Library)
 ```
 
 - The PostgreSQL test needs Docker, and is skipped without it.
@@ -64,6 +67,7 @@ Generated projects will also target Spring Boot 4.x with Apache Camel 4.
 | **Endpoint** | `REST`: method, path, path/query/header parameters, request payload, responses per status, security. `ASYNC`: channel, `SEND`/`RECEIVE`, protocol (`KAFKA JMS AMQP`), message payload, headers. Both: name (operation id), summary, tags, implementation style (or the project default) |
 | **Processing rule** | ordered per endpoint: type, name, optional condition, type-specific config (stored as JSON), and the error codes the step can fail with |
 | **Field definition** | the field inventory: a plain field (any type except objects, which belong in the object inventory) with its constraints and error codes. Adding it to a payload copies it there; the copy can then be changed on its own |
+| **Capability** | the functional capability model: a tree of up to eight levels (L1 the broadest, to L8), each with a name, optional code and description, and the APIs (endpoints) that realise it. A capability's API inventory is its own APIs plus those of everything below it. The level names are per project (defaults: Business domain, Capability area, Capability, Sub-capability, Function, Process, Activity, Task) |
 | **Error code** | the error-code inventory: a code (e.g. `PAY-001`), the message callers see, a category (`VALIDATION BUSINESS NOT_FOUND CONFLICT SECURITY DOWNSTREAM TIMEOUT PERSISTENCE MESSAGING TECHNICAL`), an HTTP status (or the category's default: 400, 422, 404, 409, 403, 503, 504, 500…), a description. Payload fields and rules list the codes they can fail with, by id |
 
 References between payloads, endpoints and rules use ids, so renaming a payload updates every place that
@@ -107,6 +111,14 @@ can also refer to an endpoint parameter, e.g. `orderId` on `GET /orders/{orderId
   field list, or click its + to add a copy; a name already in the payload gets a number) and the **object
   inventory**. Each plain field has a bookmark button that saves it to the field inventory (filled in when
   the inventory already has that name).
+- **Capabilities:** the capability map (a tree with L1–L8 chips, API counts, collapse and search), the selected
+  capability's details and path, its **API inventory** (its own APIs and every API linked below it, each saying
+  where it is linked), and what is below it. Create, edit, move (under another capability, with its
+  sub-tree), reorder and delete capabilities; **Link APIs…**; **Level names**. The overview lists the APIs not
+  mapped yet. An endpoint's Definition tab has a **Linked capabilities** picker too.
+- **Context help:** a **?** beside each screen's title (hover for a summary, click for a panel: what the
+  screen is, what you can do, tips) and **field tips**: hovering over or tabbing into any field shows what it
+  is for. The texts live in `frontend/src/lib/help/`; **Field tips** in the top bar turns them off.
 - **Field inventory:** a page listing the reusable fields with their type and constraints, error codes and
   the payload fields that share the name, with search, New field, Edit, Duplicate and Delete. Deleting an
   entry leaves the payload fields copied from it alone.
@@ -331,7 +343,8 @@ are not generated.
   name everywhere, including in rule configs (`"targetPayload": "Order"`), so the file has no database ids.
   Each payload carries its `role`. The file also carries the `errorCodes`, and fields, rules and checks
   refer to them by code (`"errorCodes": ["PAY-001"]`, a check's `"errorCode": "PAY-001"`). The field inventory
-  is in `fieldInventory`, in the same shape as payload fields. Exports made before roles existed still import: payloads that other
+  is in `fieldInventory`, in the same shape as payload fields; the capability tree is in `capabilities` (nested
+  `children`, APIs by endpoint name) and custom level names in `capabilityLevels`. Exports made before roles existed still import: payloads that other
   payloads use as a field type become inventory objects. Imported OpenAPI/AsyncAPI schemas are sorted the
   same way.
 - **OpenAPI 3.0/3.1 and AsyncAPI 2.x/3.0 files** (YAML or JSON). Several files, e.g. an OpenAPI and an
@@ -406,6 +419,10 @@ All under `/api`. Errors are RFC 9457 problem documents. A `400` lists every pro
 | `GET/POST /projects`, `GET/PUT/DELETE /projects/{id}` | project CRUD; delete removes everything inside |
 | `POST /projects/samples/order-service` | add a fresh copy of the sample |
 | `GET/POST …/{projectId}/payloads`, `GET/PUT/DELETE …/payloads/{id}` | payload CRUD; `role` is `OBJECT` or `STRUCTURE` (a new payload defaults to `STRUCTURE`, an update without it keeps the role) |
+| `GET/POST …/{projectId}/capabilities`, `GET/PUT/DELETE …/capabilities/{id}` | the capability tree (in tree order); create with `{name, code?, description?, parentId?, position?}`; a change of `parentId` moves the sub-tree; delete removes the sub-tree |
+| `GET/PUT …/capabilities/{id}/apis` | the API inventory at this capability (its own and everything below, with `direct` and `via`); `PUT {ids}` replaces its own links |
+| `GET/PUT …/endpoints/{id}/capabilities` | the capabilities an API is linked to; `PUT {ids}` replaces them |
+| `GET/PUT …/{projectId}/capability-levels` | the names of L1–L8 (`{levels: [8 names]}`, or `[]` for the defaults) |
 | `GET …/payloads?role=OBJECT` | the object inventory (or `STRUCTURE` for the rest) |
 | `GET/POST …/{projectId}/field-definitions`, `GET/PUT/DELETE …/field-definitions/{id}` | the field inventory; the body is a field (as in a payload), the answer `{ id, field, usedIn }` |
 | `POST …/payloads/{id}/duplicate` · `GET …/payloads/{id}/usages` | copy (as `NameCopy`), and list where it is used |
