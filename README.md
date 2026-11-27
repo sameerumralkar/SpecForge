@@ -12,6 +12,8 @@ code and architecture diagrams.
 - import from OpenAPI/AsyncAPI files and project JSON, and export to project JSON;
 - comparing generated output with earlier snapshots.
 
+**New here? Read the [user guide](docs/USER_GUIDE.md):** a task-by-task walk through the app.
+
 ## Run it
 
 Needs Java 21, Maven 3.9+ and Node 22+.
