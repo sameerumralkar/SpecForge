@@ -283,6 +283,10 @@ API: `GET /api/projects/{id}/diagrams` (all, both notations),
 
 ## Examples
 
+`examples/group-capability-model.xlsx` is a capability model in Excel (L1–L4 columns, codes, descriptions and
+APIs) to try **Capabilities → Import…** with. Imported into the SGQR project below, it shows exact matches,
+possible duplicates, overlaps and code clashes.
+
 `examples/sgqr-paynow-payments.specbuilder.json` is a Singapore QR (SGQR) payment service with PayNow. Import
 it with **New project → Import from files…**.
 
