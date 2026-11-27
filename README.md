@@ -20,6 +20,9 @@ code and architecture diagrams.
 
 **New here? Read the [user guide](docs/USER_GUIDE.md):** a task-by-task walk through the app.
 
+**Diagrams:** [docs/DIAGRAMS.md](docs/DIAGRAMS.md) has the workflow, sequence and entity-relationship diagrams
+(also in the app: **User guide → Diagrams**).
+
 ## Run it
 
 Needs Java 21, Maven 3.9+ and Node 22+.
