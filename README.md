@@ -23,6 +23,9 @@ code and architecture diagrams.
 **Diagrams:** [docs/DIAGRAMS.md](docs/DIAGRAMS.md) has the workflow, sequence and entity-relationship diagrams
 (also in the app: **User guide → Diagrams**).
 
+**Build prompt:** [docs/SPECFORGE_PROMPT.md](docs/SPECFORGE_PROMPT.md) describes the whole app as a prompt for an AI
+coding agent, to rebuild it from scratch phase by phase.
+
 ## Run it
 
 Needs Java 21, Maven 3.9+ and Node 22+.
