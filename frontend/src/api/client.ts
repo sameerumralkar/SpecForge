@@ -1,6 +1,6 @@
 import type {
   Endpoint, EndpointRequest, Meta, Payload, PayloadRequest, PayloadUsage, Project, ProjectRequest,
-  CodeView, DiagramsView, ErrorCode, ErrorCodeRequest, ErrorLink, GenerationDiff, ImportResult, Rule, RuleChain, RuleRequest, Snapshot, SnapshotKind, SpecsView,
+  CodeView, DiagramsView, ErrorCode, Field, FieldDefinition, ErrorCodeRequest, ErrorLink, GenerationDiff, ImportResult, Rule, RuleChain, RuleRequest, Snapshot, SnapshotKind, SpecsView,
 } from './types'
 
 export interface FieldError {
@@ -70,6 +70,11 @@ export const api = {
   duplicatePayload: (projectId: string, id: string) => request<Payload>('POST', `${p(projectId)}/payloads/${id}/duplicate`),
   payloadUsages: (projectId: string, id: string) => request<PayloadUsage[]>('GET', `${p(projectId)}/payloads/${id}/usages`),
 
+  fieldDefinitions: (projectId: string) => request<FieldDefinition[]>('GET', `${p(projectId)}/field-definitions`),
+  createFieldDefinition: (projectId: string, body: Field) => request<FieldDefinition>('POST', `${p(projectId)}/field-definitions`, body),
+  updateFieldDefinition: (projectId: string, id: string, body: Field) =>
+    request<FieldDefinition>('PUT', `${p(projectId)}/field-definitions/${id}`, body),
+  deleteFieldDefinition: (projectId: string, id: string) => request<void>('DELETE', `${p(projectId)}/field-definitions/${id}`),
   errorCodes: (projectId: string) => request<ErrorCode[]>('GET', `${p(projectId)}/error-codes`),
   createErrorCode: (projectId: string, body: ErrorCodeRequest) => request<ErrorCode>('POST', `${p(projectId)}/error-codes`, body),
   updateErrorCode: (projectId: string, id: string, body: ErrorCodeRequest) =>

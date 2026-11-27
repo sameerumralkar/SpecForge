@@ -6,6 +6,7 @@ import dev.specbuilder.importexport.ProjectExport.*;
 import dev.specbuilder.repository.ProjectRepository;
 import dev.specbuilder.service.EndpointService;
 import dev.specbuilder.service.ErrorCodeService;
+import dev.specbuilder.service.FieldDefinitionService;
 import dev.specbuilder.service.PayloadService;
 import dev.specbuilder.service.ProjectService;
 import dev.specbuilder.service.RuleService;
@@ -31,10 +32,13 @@ public class ProjectImportExportService {
     private final EndpointService endpoints;
     private final RuleService rules;
     private final ErrorCodeService errorCodes;
+    private final FieldDefinitionService fieldDefinitions;
 
     public ProjectImportExportService(ProjectService projects, ProjectRepository projectRepository, PayloadService payloads,
-                                      EndpointService endpoints, RuleService rules, ErrorCodeService errorCodes) {
+                                      EndpointService endpoints, RuleService rules, ErrorCodeService errorCodes,
+                                      FieldDefinitionService fieldDefinitions) {
         this.errorCodes = errorCodes;
+        this.fieldDefinitions = fieldDefinitions;
         this.projects = projects;
         this.projectRepository = projectRepository;
         this.payloads = payloads;
@@ -55,9 +59,8 @@ public class ProjectImportExportService {
         codeViews.forEach(c -> codeNames.put(c.id(), c.code()));
 
         List<PayloadData> payloadData = payloadViews.stream().map(v -> new PayloadData(v.name(), v.description(), v.example(),
-                v.fields().stream().map(f -> new FieldData(f.name(), f.type(), f.itemType(), f.refPayloadName(), Boolean.TRUE.equals(f.required()),
-                        f.format(), f.description(), f.example(), f.minLength(), f.maxLength(), f.minimum(), f.maximum(), f.pattern(),
-                        f.enumValues(), codes(f.errorCodeIds(), codeNames))).toList(), v.role())).toList();
+                v.fields().stream().map(f -> fieldData(f, codeNames)).toList(), v.role())).toList();
+        List<FieldData> fieldInventory = fieldDefinitions.list(projectId).stream().map(d -> fieldData(d.field(), codeNames)).toList();
 
         List<EndpointData> endpointData = endpoints.list(projectId).stream()
                 .sorted(Comparator.comparing(EndpointView::name))
@@ -74,7 +77,14 @@ public class ProjectImportExportService {
                 new ProjectData(p.name(), p.basePackage(), p.version(), p.description(), p.defaultImplementationStyle(),
                         p.allowCircularReferences()),
                 payloadData, endpointData,
-                codeViews.stream().map(c -> new ErrorCodeData(c.code(), c.message(), c.httpStatus(), c.category(), c.description())).toList());
+                codeViews.stream().map(c -> new ErrorCodeData(c.code(), c.message(), c.httpStatus(), c.category(), c.description())).toList(),
+                fieldInventory.isEmpty() ? null : fieldInventory);
+    }
+
+    private static FieldData fieldData(FieldDto f, Map<UUID, String> codeNames) {
+        return new FieldData(f.name(), f.type(), f.itemType(), f.refPayloadName(), Boolean.TRUE.equals(f.required()),
+                f.format(), f.description(), f.example(), f.minLength(), f.maxLength(), f.minimum(), f.maximum(), f.pattern(),
+                f.enumValues(), codes(f.errorCodeIds(), codeNames));
     }
 
     private static List<String> codes(List<UUID> ids, Map<UUID, String> codeNames) {
@@ -185,6 +195,16 @@ public class ProjectImportExportService {
             ErrorCodeView view = prefixed("errorCodes[" + i + "]", () -> errorCodes.create(projectId,
                     new ErrorCodeRequest(c.code(), c.message(), c.httpStatus(), c.category(), c.description())));
             codeIds.put(view.code().toUpperCase(Locale.ROOT), view.id());
+        }
+
+        List<FieldData> inventory = data.fieldInventory() == null ? List.of() : data.fieldInventory();
+        for (int i = 0; i < inventory.size(); i++) {
+            FieldData f = inventory.get(i);
+            String at = "fieldInventory[" + i + "]";
+            List<UUID> fieldCodes = codeRefs(codeIds, f.errorCodes(), at + ".errorCodes");
+            prefixed(at, () -> fieldDefinitions.create(projectId, new FieldDto(f.name(), f.type(), f.itemType(), null, null, f.required(),
+                    f.format(), f.description(), f.example(), f.minLength(), f.maxLength(), f.minimum(), f.maximum(), f.pattern(),
+                    f.enumValues(), fieldCodes)));
         }
 
         // Payloads first without fields, so fields can refer to any of them; then with fields.

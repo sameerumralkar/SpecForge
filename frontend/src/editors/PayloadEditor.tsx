@@ -1,25 +1,30 @@
 import { Fragment, lazy, Suspense, useState } from 'react'
 import {
-  Autocomplete, Box, Button, Card, CardContent, CardHeader, Checkbox, Chip, Collapse, IconButton, MenuItem, Stack,
+  Box, Button, Card, CardContent, CardHeader, Checkbox, Collapse, IconButton, MenuItem, Stack,
   Table, TableBody, TableCell, TableHead, TableRow, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
+import BookmarkAddOutlinedIcon from '@mui/icons-material/BookmarkAddOutlined'
+import BookmarkAddedIcon from '@mui/icons-material/BookmarkAdded'
 import TuneIcon from '@mui/icons-material/Tune'
+import { useParams } from 'react-router'
+import { useFieldDefinitions } from '../api/hooks'
 import type { Field, FieldType, Payload, PayloadRequest, PayloadRole } from '../api/types'
 import { ObjectDropZone } from '../components/inventory/ObjectDnd'
 import { payloadOptions } from '../components/inventory/PayloadOptions'
-import { objectField } from '../lib/inventory'
-import { ErrorCodeChips, ErrorCodePicker } from '../components/errors/ErrorCodes'
+import { inventoryField, objectField } from '../lib/inventory'
+import { ErrorCodeChips } from '../components/errors/ErrorCodes'
+import { FieldDefinitionDialog } from '../components/inventory/FieldDefinitionDialog'
+import { FieldConstraints } from './FieldConstraints'
 import { errorText } from '../lib/errors'
 import { mono } from '../theme'
 import { emptyField, FIELD_TYPES } from '../lib/mappers'
 
 const CodeEditor = lazy(() => import('../components/CodeEditor'))
 
-const NUMERIC: FieldType[] = ['INTEGER', 'LONG', 'NUMBER', 'DECIMAL']
 
 
 
@@ -39,6 +44,9 @@ export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
   error: unknown
 }) {
   const [open, setOpen] = useState<Set<number>>(new Set())
+  const [saving, setSaving] = useState<Field | null>(null)
+  const { projectId } = useParams()
+  const inventoryNames = new Set((useFieldDefinitions(projectId).data ?? []).map((d) => d.field.name.toLowerCase()))
   const err = (f: string) => errorText(error, f)
 
   const setFields = (fields: Field[]) => onChange({ ...value, fields })
@@ -90,8 +98,9 @@ export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
         </CardContent>
       </Card>
 
-      <ObjectDropZone id="payload-fields" label="the field list" hint="Add {name} as a field"
-        onDrop={(object) => setFields([...value.fields, objectField(object, value.fields)])}>
+      <ObjectDropZone id="payload-fields" label="the field list" hint="Add {name} as a field" fieldHint="Add field {name}"
+        onDrop={(object) => setFields([...value.fields, objectField(object, value.fields)])}
+        onDropField={(definition) => setFields([...value.fields, inventoryField(definition, value.fields)])}>
       <Card variant="outlined">
         <CardHeader title="Fields" slotProps={{ title: { variant: 'subtitle1' } }}
           action={<Button startIcon={<AddIcon />} onClick={() => setFields([...value.fields, emptyField()])}>Add field</Button>} />
@@ -103,7 +112,7 @@ export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
               <TableCell sx={{ width: 172 }}>Type</TableCell>
               <TableCell>Items / object</TableCell>
               <TableCell align="center" sx={{ width: 84 }}>Required</TableCell>
-              <TableCell align="right" sx={{ width: 168 }} />
+              <TableCell align="right" sx={{ width: 204 }} />
             </TableRow>
           </TableHead>
           <TableBody>
@@ -154,6 +163,13 @@ export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
                           <TuneIcon fontSize="small" />{n > 0 && <Typography variant="caption" sx={{ ml: 0.25 }}>{n}</Typography>}
                         </IconButton>
                       </Tooltip>
+                      {projectId && !needsRef(f) && (inventoryNames.has(f.name.trim().toLowerCase())
+                        ? <Tooltip title="In the field inventory"><span><IconButton disabled aria-label={`Field ${i + 1} is in the field inventory`}><BookmarkAddedIcon fontSize="small" /></IconButton></span></Tooltip>
+                        : <Tooltip title="Save to the field inventory">
+                            <span><IconButton aria-label={`Save field ${i + 1} to the field inventory`} disabled={!f.name.trim()} onClick={() => setSaving(f)}>
+                              <BookmarkAddOutlinedIcon fontSize="small" />
+                            </IconButton></span>
+                          </Tooltip>)}
                       <IconButton aria-label={`Move field ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}><ArrowUpwardIcon fontSize="small" /></IconButton>
                       <IconButton aria-label={`Move field ${i + 1} down`} disabled={i === value.fields.length - 1} onClick={() => move(i, 1)}><ArrowDownwardIcon fontSize="small" /></IconButton>
                       <IconButton aria-label={`Remove field ${i + 1}`} onClick={() => setFields(value.fields.filter((_, j) => j !== i))}><DeleteOutlineIcon fontSize="small" /></IconButton>
@@ -185,6 +201,7 @@ export function PayloadEditor({ value, onChange, payloads, selfId, error }: {
           {err('example') && <Typography color="error" variant="caption">{err('example')}</Typography>}
         </CardContent>
       </Card>
+      {projectId && <FieldDefinitionDialog projectId={projectId} open={!!saving} initial={saving} onClose={() => setSaving(null)} />}
     </Stack>
   )
 }
@@ -199,52 +216,3 @@ function fieldErrorsOf(error: unknown, prefix: string): Record<string, string> {
   return out
 }
 
-function numberOrNull(s: string): number | null {
-  return s.trim() === '' || Number.isNaN(Number(s)) ? null : Number(s)
-}
-
-function FieldConstraints({ field: f, onChange, err }: {
-  field: Field
-  onChange: (patch: Partial<Field>) => void
-  err: (key: string) => string | undefined
-}) {
-  const valueType = f.type === 'ARRAY' ? f.itemType : f.type
-  const isString = valueType === 'STRING'
-  const isNumeric = !!valueType && NUMERIC.includes(valueType)
-  const hasLength = f.type === 'STRING' || f.type === 'ARRAY'
-  const num = (key: 'minLength' | 'maxLength' | 'minimum' | 'maximum', label: string) => (
-    <TextField label={label} type="number" value={f[key] ?? ''} onChange={(e) => onChange({ [key]: numberOrNull(e.target.value) })}
-      error={!!err(key)} helperText={err(key)} sx={{ maxWidth: 160 }} />
-  )
-  return (
-    <Stack spacing={2} sx={{ py: 2 }}>
-      <Stack direction="row" spacing={2}>
-        <TextField label="Description" value={f.description ?? ''} onChange={(e) => onChange({ description: e.target.value })} error={!!err('description')} helperText={err('description')} />
-        <TextField label="Example" value={f.example ?? ''} onChange={(e) => onChange({ example: e.target.value })} sx={{ maxWidth: 220 }} />
-        <TextField label="Format" placeholder="email, uri, …" value={f.format ?? ''} onChange={(e) => onChange({ format: e.target.value })} sx={{ maxWidth: 180 }}
-          error={!!err('format')} helperText={err('format')} />
-      </Stack>
-      <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
-        {hasLength && num('minLength', f.type === 'ARRAY' ? 'Min items' : 'Min length')}
-        {hasLength && num('maxLength', f.type === 'ARRAY' ? 'Max items' : 'Max length')}
-        {isNumeric && num('minimum', 'Minimum')}
-        {isNumeric && num('maximum', 'Maximum')}
-        {isString && (
-          <TextField label="Pattern (regex)" value={f.pattern ?? ''} onChange={(e) => onChange({ pattern: e.target.value })}
-            error={!!err('pattern')} helperText={err('pattern')} slotProps={{ htmlInput: { style: { fontFamily: mono.fontFamily } } }} />
-        )}
-      </Stack>
-      {isString && (
-        <Autocomplete multiple freeSolo options={[]} value={f.enumValues}
-          onChange={(_, v) => onChange({ enumValues: v as string[] })}
-          renderValue={(values, getItemProps) => values.map((v, index) => <Chip label={v} {...getItemProps({ index })} key={v} />)}
-          renderInput={(params) => (
-            <TextField {...params} label="Allowed values" placeholder="Type a value and press Enter"
-              error={!!err('enumValues')} helperText={err('enumValues') ?? 'Leave empty to allow any text'} />
-          )} />
-      )}
-      <ErrorCodePicker value={f.errorCodeIds ?? []} onChange={(errorCodeIds) => onChange({ errorCodeIds })} error={err('errorCodeIds')}
-        helperText="What callers get when this field is wrong; checks on the field use the first code" />
-    </Stack>
-  )
-}

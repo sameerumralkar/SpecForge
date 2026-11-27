@@ -5,7 +5,8 @@ code and architecture diagrams.
 
 **Status: all six phases are done.** The app covers:
 
-- the editor, with an object inventory of reusable building blocks you drag into requests and responses;
+- the editor, with a field inventory of reusable fields you drag into objects, and an object inventory of reusable
+  building blocks you drag into requests and responses;
 - generation of specs (OpenAPI 3.1 / AsyncAPI 3.0, validated), Java code (implementation classes and Camel
   routes) and diagrams (Mermaid and PlantUML);
 - import from OpenAPI/AsyncAPI files and project JSON, and export to project JSON;
@@ -23,8 +24,8 @@ cd frontend && npm install && npm run dev  # UI on http://localhost:5173 (calls 
 Tests:
 
 ```bash
-cd backend && mvn test        # 142 tests; see the notes below
-cd frontend && npm test       # 55 component and unit tests (Vitest + Testing Library)
+cd backend && mvn test        # 144 tests; see the notes below
+cd frontend && npm test       # 58 component and unit tests (Vitest + Testing Library)
 ```
 
 - The PostgreSQL test needs Docker, and is skipped without it.
@@ -60,6 +61,7 @@ Generated projects will also target Spring Boot 4.x with Apache Camel 4.
 | **Payload field** | name, type (`STRING INTEGER LONG NUMBER DECIMAL BOOLEAN DATE DATE_TIME UUID OBJECT ARRAY`), item type for arrays, referenced payload for objects, required, format, min/max length, min/max value, pattern, allowed values |
 | **Endpoint** | `REST`: method, path, path/query/header parameters, request payload, responses per status, security. `ASYNC`: channel, `SEND`/`RECEIVE`, protocol (`KAFKA JMS AMQP`), message payload, headers. Both: name (operation id), summary, tags, implementation style (or the project default) |
 | **Processing rule** | ordered per endpoint: type, name, optional condition, type-specific config (stored as JSON), and the error codes the step can fail with |
+| **Field definition** | the field inventory: a plain field (any type except objects, which belong in the object inventory) with its constraints and error codes. Adding it to a payload copies it there; the copy can then be changed on its own |
 | **Error code** | the error-code inventory: a code (e.g. `PAY-001`), the message callers see, a category (`VALIDATION BUSINESS NOT_FOUND CONFLICT SECURITY DOWNSTREAM TIMEOUT PERSISTENCE MESSAGING TECHNICAL`), an HTTP status (or the category's default: 400, 422, 404, 409, 403, 503, 504, 500…), a description. Payload fields and rules list the codes they can fail with, by id |
 
 References between payloads, endpoints and rules use ids, so renaming a payload updates every place that
@@ -85,7 +87,7 @@ can also refer to an endpoint parameter, e.g. `orderId` on `GET /orders/{orderId
 
 - **Sidebar:** the menu below, endpoints grouped by their first tag (REST) or by channel
   (async), and payloads split into inventory objects and structures. Each item's ⋮ menu has Duplicate and Delete.
-- **Left menu:** **Overview & settings**, **Object inventory**, **Error codes**, **API spec** (OpenAPI/AsyncAPI with
+- **Left menu:** **Overview & settings**, **Field inventory**, **Object inventory**, **Error codes**, **API spec** (OpenAPI/AsyncAPI with
   validation), **Generated code** and **Diagrams** each open a full page; below them are the endpoints and payloads. The **Preview** button
   in the top bar shows the same outputs beside the editor.
 - **Endpoint editor:** five tabs.
@@ -99,7 +101,13 @@ can also refer to an endpoint parameter, e.g. `orderId` on `GET /orders/{orderId
   - **Diagrams:** this endpoint's sequence diagram and class diagram.
 - **Payload editor:** an Inventory object / Structure switch, a fields table (type, list item type,
   referenced object, required, plus a constraints panel), a JSON example in Monaco, and "used by" links. A
-  blocked delete lists every use.
+  blocked delete lists every use. Beside it are two palettes: the **field inventory** (drag a field onto the
+  field list, or click its + to add a copy; a name already in the payload gets a number) and the **object
+  inventory**. Each plain field has a bookmark button that saves it to the field inventory (filled in when
+  the inventory already has that name).
+- **Field inventory:** a page listing the reusable fields with their type and constraints, error codes and
+  the payload fields that share the name, with search, New field, Edit, Duplicate and Delete. Deleting an
+  entry leaves the payload fields copied from it alone.
 - **Object inventory:** a page listing the inventory objects with their fields and where each is used,
   with New object, Edit, Duplicate, Delete (refused, with the list of uses, while anything uses it) and
   moving payloads between the inventory and the structures.
@@ -320,7 +328,8 @@ are not generated.
   the whole project as readable JSON: settings, payloads, endpoints and rules. Payloads are referred to by
   name everywhere, including in rule configs (`"targetPayload": "Order"`), so the file has no database ids.
   Each payload carries its `role`. The file also carries the `errorCodes`, and fields, rules and checks
-  refer to them by code (`"errorCodes": ["PAY-001"]`, a check's `"errorCode": "PAY-001"`). Exports made before roles existed still import: payloads that other
+  refer to them by code (`"errorCodes": ["PAY-001"]`, a check's `"errorCode": "PAY-001"`). The field inventory
+  is in `fieldInventory`, in the same shape as payload fields. Exports made before roles existed still import: payloads that other
   payloads use as a field type become inventory objects. Imported OpenAPI/AsyncAPI schemas are sorted the
   same way.
 - **OpenAPI 3.0/3.1 and AsyncAPI 2.x/3.0 files** (YAML or JSON). Several files, e.g. an OpenAPI and an
@@ -396,6 +405,7 @@ All under `/api`. Errors are RFC 9457 problem documents. A `400` lists every pro
 | `POST /projects/samples/order-service` | add a fresh copy of the sample |
 | `GET/POST …/{projectId}/payloads`, `GET/PUT/DELETE …/payloads/{id}` | payload CRUD; `role` is `OBJECT` or `STRUCTURE` (a new payload defaults to `STRUCTURE`, an update without it keeps the role) |
 | `GET …/payloads?role=OBJECT` | the object inventory (or `STRUCTURE` for the rest) |
+| `GET/POST …/{projectId}/field-definitions`, `GET/PUT/DELETE …/field-definitions/{id}` | the field inventory; the body is a field (as in a payload), the answer `{ id, field, usedIn }` |
 | `POST …/payloads/{id}/duplicate` · `GET …/payloads/{id}/usages` | copy (as `NameCopy`), and list where it is used |
 | `GET/POST …/{projectId}/endpoints`, `GET/PUT/DELETE …/endpoints/{id}` | endpoint CRUD |
 | `POST …/endpoints/{id}/duplicate` | copy with rules; a REST copy gets `/copy` added to its path |
@@ -427,6 +437,8 @@ All under `/api`. Errors are RFC 9457 problem documents. A `400` lists every pro
 - **Error codes**: upper-case letters and digits separated by `-`, `_` or `.` (at most 40), unique in the
   project ignoring case, a message, and an error status (400–599) if one is set. Fields, rules and checks
   may only refer to the project's own codes.
+- **Field inventory**: the same checks as a payload field, a name unique in the inventory ignoring case, and
+  no `OBJECT` fields or arrays of objects.
 - **Rule chain warnings** (the rule still saves): field paths that don't exist, checks that don't suit the
   field type, splitting something that isn't an array, an error handler aimed at a rule that doesn't
   exist, and an entity name that clashes with a payload.

@@ -9,6 +9,7 @@ export const keys = {
   payloads: (projectId: string) => ['projects', projectId, 'payloads'] as const,
   endpoints: (projectId: string) => ['projects', projectId, 'endpoints'] as const,
   errorCodes: (projectId: string) => ['projects', projectId, 'error-codes'] as const,
+  fieldDefinitions: (projectId: string) => ['projects', projectId, 'field-definitions'] as const,
   rules: (projectId: string, endpointId: string) => ['projects', projectId, 'endpoints', endpointId, 'rules'] as const,
   specs: (projectId: string) => ['projects', projectId, 'specs'] as const,
   code: (projectId: string) => ['projects', projectId, 'code'] as const,
@@ -25,6 +26,8 @@ export const usePayloads = (projectId: string) =>
 export const useEndpoints = (projectId: string) =>
   useQuery({ queryKey: keys.endpoints(projectId), queryFn: () => api.endpoints(projectId) })
 /** The project's error-code inventory; not fetched without a project. */
+export const useFieldDefinitions = (projectId: string | undefined) =>
+  useQuery({ queryKey: keys.fieldDefinitions(projectId ?? ''), queryFn: () => api.fieldDefinitions(projectId!), enabled: !!projectId })
 export const useErrorCodes = (projectId: string | undefined) =>
   useQuery({ queryKey: keys.errorCodes(projectId ?? ''), queryFn: () => api.errorCodes(projectId!), enabled: !!projectId })
 export const useRuleChain = (projectId: string, endpointId: string) =>

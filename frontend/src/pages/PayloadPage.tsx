@@ -13,6 +13,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { UsagesDialog } from '../components/UsagesDialog'
 import { PayloadEditor } from '../editors/PayloadEditor'
 import { InventoryPalette } from '../components/inventory/InventoryPalette'
+import { FieldPalette } from '../components/inventory/FieldPalette'
+import { inventoryField } from '../lib/inventory'
 import { ObjectDndProvider } from '../components/inventory/ObjectDnd'
 import { toPayloadRequest } from '../lib/mappers'
 import { useDraft } from '../lib/useDraft'
@@ -102,7 +104,10 @@ function PayloadPageContent({ projectId, payload, payloads }: { projectId: strin
         <ObjectDndProvider>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 270px', gap: 3, alignItems: 'start' }}>
             <PayloadEditor value={draft} onChange={setDraft} payloads={payloads} selfId={payload.id} error={error} />
-            <InventoryPalette projectId={projectId} payloads={payloads} excludeId={payload.id} />
+            <Stack spacing={2} sx={{ position: 'sticky', top: 16 }}>
+              <FieldPalette projectId={projectId} onAdd={(d) => setDraft({ ...draft, fields: [...draft.fields, inventoryField(d, draft.fields)] })} />
+              <InventoryPalette projectId={projectId} payloads={payloads} excludeId={payload.id} sticky={false} />
+            </Stack>
           </Box>
         </ObjectDndProvider>
       </Box>

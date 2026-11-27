@@ -6,6 +6,7 @@ import dev.specbuilder.domain.rule.RuleType;
 import dev.specbuilder.repository.ProjectRepository;
 import dev.specbuilder.service.EndpointService;
 import dev.specbuilder.service.ErrorCodeService;
+import dev.specbuilder.service.FieldDefinitionService;
 import dev.specbuilder.service.PayloadService;
 import dev.specbuilder.service.ProjectService;
 import dev.specbuilder.service.RuleService;
@@ -34,10 +35,13 @@ public class SampleProjects {
     private final EndpointService endpoints;
     private final RuleService rules;
     private final ErrorCodeService errorCodes;
+    private final FieldDefinitionService fieldInventory;
 
     public SampleProjects(ProjectRepository projectRepository, ProjectService projects, PayloadService payloads,
-                          EndpointService endpoints, RuleService rules, ErrorCodeService errorCodes) {
+                          EndpointService endpoints, RuleService rules, ErrorCodeService errorCodes,
+                          FieldDefinitionService fieldInventory) {
         this.errorCodes = errorCodes;
+        this.fieldInventory = fieldInventory;
         this.projectRepository = projectRepository;
         this.projects = projects;
         this.payloads = payloads;
@@ -55,6 +59,26 @@ public class SampleProjects {
                 "Sample project: takes orders over REST, checks the customer, stores the order and announces it on Kafka; "
                         + "listens for payment results to update the order.",
                 ImplementationStyle.IMPLEMENTATION_CLASS, false)).id();
+
+        // The field inventory: fields that recur across payloads, ready to drag into new objects.
+        for (FieldDto definition : List.of(
+                field("id", FieldType.UUID, true, f -> f.description = "Identifier assigned by the service"),
+                field("customerId", FieldType.UUID, true, f -> f.description = "The customer's id in customer-service"),
+                field("email", FieldType.STRING, true, f -> f.format = "email"),
+                field("country", FieldType.STRING, true, f -> {
+                    f.minLength = 2;
+                    f.maxLength = 2;
+                    f.description = "ISO 3166-1 alpha-2 country code";
+                }),
+                field("sku", FieldType.STRING, true, f -> f.pattern = "[A-Z0-9-]{4,20}"),
+                field("quantity", FieldType.INTEGER, true, f -> {
+                    f.minimum = 1.0;
+                    f.maximum = 1000.0;
+                }),
+                field("amount", FieldType.DECIMAL, true, f -> f.minimum = 0.0),
+                field("createdAt", FieldType.DATE_TIME, true, f -> f.description = "When the record was created (UTC)"))) {
+            fieldInventory.create(p, definition);
+        }
 
         UUID address = object(p, "Address", "A postal address.",
                 "{\"street\":\"1 Main St\",\"city\":\"Springfield\",\"postalCode\":\"12345\",\"country\":\"US\"}",

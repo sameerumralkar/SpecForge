@@ -171,6 +171,15 @@ export interface ErrorLink {
   detail?: string | null
 }
 
+/** An entry of the field inventory: a plain field to copy into payloads. */
+export interface FieldDefinition {
+  id: string
+  projectId: string
+  field: Field
+  /** Payload fields with the same name, "Money.currency". */
+  usedIn: string[]
+}
+
 export interface ErrorCode extends ErrorCodeRequest {
   id: string
   projectId: string

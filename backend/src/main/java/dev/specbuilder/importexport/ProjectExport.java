@@ -11,13 +11,18 @@ import java.util.List;
  * A whole project as one portable JSON document. Payloads are referred to by name everywhere
  * (fields, bodies, rule configs), so the file reads well and imports into any instance.
  * In rule configs, a "...PayloadId" setting becomes "...Payload" holding the payload's name.
- * Error codes are referred to by their code.
+ * Error codes are referred to by their code. {@code fieldInventory} holds the reusable field definitions.
  */
 public record ProjectExport(String format, Integer version, ProjectData project, List<PayloadData> payloads,
-                            List<EndpointData> endpoints, List<ErrorCodeData> errorCodes) {
+                            List<EndpointData> endpoints, List<ErrorCodeData> errorCodes, List<FieldData> fieldInventory) {
 
     public ProjectExport(String format, Integer version, ProjectData project, List<PayloadData> payloads, List<EndpointData> endpoints) {
-        this(format, version, project, payloads, endpoints, null);
+        this(format, version, project, payloads, endpoints, null, null);
+    }
+
+    public ProjectExport(String format, Integer version, ProjectData project, List<PayloadData> payloads, List<EndpointData> endpoints,
+                         List<ErrorCodeData> errorCodes) {
+        this(format, version, project, payloads, endpoints, errorCodes, null);
     }
 
     /** An entry of the error-code inventory. Fields, rules and checks refer to it by {@code code}. */

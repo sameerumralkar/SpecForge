@@ -230,7 +230,8 @@ public class PayloadService {
         target.replaceFields(fields);
     }
 
-    private static PayloadField field(FieldDto dto, String at, Map<UUID, Payload> byId, ValidationErrors errors) {
+    /** Checks and builds one field; {@code at} prefixes the error keys ("fields[2]."). */
+    static PayloadField field(FieldDto dto, String at, Map<UUID, Payload> byId, ValidationErrors errors) {
         PayloadField f = new PayloadField();
         String name = ValidationErrors.trimToNull(dto.name());
         String nameError = IdentifierRules.checkIdentifier(name);

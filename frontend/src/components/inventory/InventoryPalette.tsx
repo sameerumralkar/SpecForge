@@ -12,7 +12,13 @@ import type { Payload } from '../../api/types'
 import { NewPayloadDialog } from '../NewPayloadDialog'
 
 /** The project's inventory objects, to drag into fields, request and response bodies and messages. */
-export function InventoryPalette({ projectId, payloads, excludeId }: { projectId: string; payloads: Payload[]; excludeId?: string }) {
+export function InventoryPalette({ projectId, payloads, excludeId, sticky = true }: {
+  projectId: string
+  payloads: Payload[]
+  excludeId?: string
+  /** False when it shares a sticky column with the field inventory. */
+  sticky?: boolean
+}) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [creating, setCreating] = useState(false)
@@ -20,7 +26,7 @@ export function InventoryPalette({ projectId, payloads, excludeId }: { projectId
   const shown = objects.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
 
   return (
-    <Card variant="outlined" component="aside" aria-label="Object inventory" sx={{ position: 'sticky', top: 16 }}>
+    <Card variant="outlined" component="aside" aria-label="Object inventory" sx={sticky ? { position: 'sticky', top: 16 } : undefined}>
       <CardHeader title="Object inventory" subheader="Drag an object onto a field list or a body"
         slotProps={{ title: { variant: 'subtitle2' }, subheader: { variant: 'caption' } }}
         action={<Tooltip title="New object"><IconButton aria-label="New inventory object" onClick={() => setCreating(true)}><AddIcon fontSize="small" /></IconButton></Tooltip>} />
@@ -30,7 +36,7 @@ export function InventoryPalette({ projectId, payloads, excludeId }: { projectId
             slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
         </Box>
       )}
-      <List dense disablePadding sx={{ maxHeight: 'calc(100vh - 260px)', overflow: 'auto', pb: 1 }}>
+      <List dense disablePadding sx={{ maxHeight: sticky ? 'calc(100vh - 260px)' : 'calc(50vh - 120px)', overflow: 'auto', pb: 1 }}>
         {objects.length === 0 && (
           <Typography variant="body2" color="text.secondary" sx={{ px: 2, pb: 1 }}>
             No objects yet. Mark a payload as an object, or create one with +.

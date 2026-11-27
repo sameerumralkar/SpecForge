@@ -8,6 +8,7 @@ import dev.specbuilder.domain.*;
 import dev.specbuilder.domain.rule.RuleConfig;
 import dev.specbuilder.domain.rule.ValidateConfig;
 import dev.specbuilder.repository.ErrorCodeRepository;
+import dev.specbuilder.repository.FieldDefinitionRepository;
 import dev.specbuilder.repository.PayloadRepository;
 import dev.specbuilder.repository.ProcessingRuleRepository;
 import dev.specbuilder.validation.NotFoundException;
@@ -36,9 +37,11 @@ public class ErrorCodeService {
     private final PayloadRepository payloads;
     private final ProcessingRuleRepository rules;
     private final RuleConfigCodec codec;
+    private final FieldDefinitionRepository definitions;
 
     public ErrorCodeService(ProjectService projectService, ErrorCodeRepository codes, PayloadRepository payloads,
-                            ProcessingRuleRepository rules, RuleConfigCodec codec) {
+                            ProcessingRuleRepository rules, RuleConfigCodec codec, FieldDefinitionRepository definitions) {
+        this.definitions = definitions;
         this.projectService = projectService;
         this.codes = codes;
         this.payloads = payloads;
@@ -77,9 +80,14 @@ public class ErrorCodeService {
         return view(code);
     }
 
-    /** Deletes the code and takes it off every field, rule and check that used it. */
+    /** Deletes the code and takes it off every field, field-inventory entry, rule and check that used it. */
     public void delete(UUID projectId, UUID id) {
         ErrorCode code = require(projectId, id);
+        for (FieldDefinition d : definitions.findByProjectId(projectId)) {
+            if (d.getField().getErrorCodeIds().contains(id)) {
+                d.getField().setErrorCodeIds(without(d.getField().getErrorCodeIds(), id));
+            }
+        }
         for (Payload p : payloads.findByProjectId(projectId)) {
             for (PayloadField f : p.getFields()) {
                 if (f.getErrorCodeIds().contains(id)) {
