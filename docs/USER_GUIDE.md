@@ -251,6 +251,56 @@ Click the chip to go there.
 Capabilities, their links and the level names are part of the project export, so they travel with the
 project.
 
+### Import capabilities from Excel, CSV or JSON
+
+If your organisation already keeps its capability model in a spreadsheet or another tool, import it instead
+of typing it in. Nothing in the map changes until you apply the import.
+
+1. On **Capabilities**, choose **Import…** and pick the file. You can use:
+   - **Excel** (`.xlsx`): the first sheet with capability columns is read;
+   - **CSV** or **TSV**;
+   - **JSON**.
+
+   Older `.xls` workbooks must be saved as `.xlsx` first. The dialog has CSV and JSON templates.
+2. Use one of these layouts. SpecForge recognises it from the header row:
+
+   | Layout | Columns |
+   |---|---|
+   | **Level columns** | **L1**, **L2** … **L8**, one row per capability. A blank cell takes the value from the row above, as with merged cells. Optionally **L2 code**, **L2 description** and so on. |
+   | **Parent column** | **Name** and **Parent** (the parent's code or name) |
+   | **Level column** | **Name** and **Level** (1–8 or L1–L8), in outline order |
+   | **JSON tree** | `name`, `code`, `description`, `apis`, `children`. A SpecForge project export works too. |
+
+   In every layout, **Code**, **Description** and **APIs** columns are optional. **APIs** lists endpoint
+   names, separated by commas, to link to the capability.
+3. The file opens as a **draft**. Drafts are saved, so you can leave and reopen them from the Capabilities
+   overview. On the left is the imported tree; on the right, your existing map. Each imported capability is
+   compared with the map:
+
+   | Shown as | Means |
+   |---|---|
+   | **in the map** | the same capability is already at the same place; it is set to merge into it |
+   | **possible duplicate** | a very similar name, or the same code, elsewhere in the map; or the same capability twice in the file |
+   | **overlap** | one name contains the other, the descriptions are much alike, or an API in the row is already linked to another capability |
+   | **blocks applying** | it would be deeper than L8, its code is already used by another capability, or its merge target no longer exists |
+
+   Select a row to highlight, in your map, the capabilities it was compared with. The filters show only
+   duplicates, overlaps, blocking problems, or new or merging capabilities.
+4. Decide what happens to each capability:
+   - **Create as new**;
+   - **Merge into an existing one**: no second capability is made, and its children go below the existing
+     one. **Merge** on a finding does this in one click.
+   - **Skip**: the capability and everything below it are left out.
+
+   You can also:
+   - edit names and codes in place;
+   - edit the details (description and APIs), move a capability, add one, or remove one;
+   - choose **Import under** to place the whole import below an existing capability;
+   - use **Merge the … already in the map**, which handles every exact match at once.
+5. Choose **Apply import**. Merging fills in a missing code or description on the existing capability and
+   links the APIs; it never renames or moves it. The draft then shows what was created, merged, skipped and
+   linked. **Discard** deletes a draft without changing the map.
+
 ## 9. Manage error codes
 
 The **Error codes** page is the inventory of every error your API can answer with.

@@ -15,9 +15,11 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import LinkIcon from '@mui/icons-material/Link'
 import LinkOffIcon from '@mui/icons-material/LinkOff'
 import SearchIcon from '@mui/icons-material/Search'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
+import { CapabilityImportDialog } from '../components/capabilities/CapabilityImportDialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
-import { keys, useCapabilities, useCapabilityApis, useCapabilityLevels, useEndpoints } from '../api/hooks'
+import { keys, useCapabilities, useCapabilityApis, useCapabilityImports, useCapabilityLevels, useEndpoints } from '../api/hooks'
 import type { Capability, CapabilityRequest, Endpoint } from '../api/types'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ErrorSummary } from '../components/ErrorSummary'
@@ -54,6 +56,7 @@ export function CapabilitiesPage() {
   const [deleting, setDeleting] = useState<Capability | null>(null)
   const [naming, setNaming] = useState(false)
   const [linking, setLinking] = useState<Capability | null>(null)
+  const [importing, setImporting] = useState(false)
   const [error, setError] = useState<unknown>(null)
 
   const all = useMemo(() => capabilities.data ?? [], [capabilities.data])
@@ -120,6 +123,7 @@ export function CapabilitiesPage() {
         <TextField size="small" sx={{ width: 240, flexShrink: 0 }} placeholder="Find a capability" value={query} onChange={(e) => setQuery(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
         <Button onClick={() => setNaming(true)} sx={{ flexShrink: 0 }}>Level names</Button>
+        <Button startIcon={<UploadFileIcon />} onClick={() => setImporting(true)} sx={{ flexShrink: 0 }}>Import…</Button>
         <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing({ capability: null, parentId: null })} sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
           New L1 capability
         </Button>
@@ -177,6 +181,7 @@ export function CapabilitiesPage() {
 
       <CapabilityDialog projectId={projectId!} open={!!editing} editing={editing?.capability ?? null} parentId={editing?.parentId ?? null}
         all={all} onClose={() => setEditing(null)} onSaved={async (c) => { await refresh(); select(c.id) }} />
+      <CapabilityImportDialog projectId={projectId!} open={importing} onClose={() => setImporting(false)} />
       <LevelNamesDialog projectId={projectId!} open={naming} levels={levelNames} onClose={() => setNaming(false)} />
       <LinkApisDialog projectId={projectId!} capability={linking} endpoints={endpoints.data ?? []} onClose={() => setLinking(null)} />
       <ConfirmDialog open={!!deleting} title={`Delete ${deleting?.name}?`} onClose={() => setDeleting(null)}
@@ -191,8 +196,28 @@ export function CapabilitiesPage() {
 
 function Overview({ levelNames, all, unmapped, projectId }: { levelNames: string[]; all: Capability[]; unmapped: Endpoint[]; projectId: string }) {
   const navigate = useNavigate()
+  const imports = useCapabilityImports(projectId)
   return (
     <Stack spacing={3}>
+      {(imports.data?.length ?? 0) > 0 && (
+        <Card variant="outlined">
+          <CardHeader title="Imports" subheader="Files read into drafts. Open one to review, edit and apply it."
+            slotProps={{ title: { variant: 'subtitle1' } }} />
+          <Table size="small" aria-label="Imports">
+            <TableBody>
+              {imports.data!.map((i) => (
+                <TableRow key={i.id} hover>
+                  <TableCell><Link component="button" variant="body2" onClick={() => navigate(`/projects/${projectId}/capabilities/imports/${i.id}`)}>{i.fileName}</Link></TableCell>
+                  <TableCell>{i.format}</TableCell>
+                  <TableCell>{i.total} capabilities</TableCell>
+                  <TableCell><Chip size="small" color={i.status === 'DRAFT' ? 'warning' : 'success'} label={i.status === 'DRAFT' ? 'Draft' : 'Applied'} /></TableCell>
+                  <TableCell>{new Date(i.updatedAt).toLocaleString()}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
       <Card variant="outlined">
         <CardHeader title="Levels" subheader="Rename them with Level names" slotProps={{ title: { variant: 'subtitle1' } }} />
         <Table size="small" aria-label="Levels">

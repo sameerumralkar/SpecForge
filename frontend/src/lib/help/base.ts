@@ -54,6 +54,29 @@ export const BASE_HELP: HelpBundle = {
       ],
       guide: '§ 8 Map capabilities',
     },
+    'capability-import': {
+      title: 'Import capabilities',
+      summary: 'A capability file (Excel, CSV or JSON) read into a draft: compared with your capability map, with possible duplicates and overlaps highlighted, editable, and applied only when you say so.',
+      sections: [
+        { heading: 'What this screen is', items: [
+          'The imported capabilities as a tree (left) beside your existing map (right). Nothing in the map changes until you apply the import.',
+          'Each imported capability is compared with the map: already there at the same place, the same code, a similar name (possible duplicate), a name that contains another or a similar description (overlap), an API already linked elsewhere, a duplicate within the file, or deeper than L8.',
+          'Drafts are saved: leave and come back from the Capabilities overview.',
+        ] },
+        { heading: 'What you can do', items: [
+          'For each capability choose what applying does: create it as new, merge it into an existing capability (its children go below that one), or skip it with everything below.',
+          'Use Merge on a finding to merge into the capability it points at; "Merge the … already in the map" does it for every exact match.',
+          'Edit names and codes in place; edit details, move, add or remove capabilities; choose where the import goes (Import under).',
+          'Select a row to highlight, in your map, what it was compared with. Filter by duplicates, overlaps or blocking problems.',
+          'Apply import when nothing is marked "blocks applying"; or Discard the draft.',
+        ] },
+      ],
+      tips: [
+        'Merging fills in a missing code or description of the existing capability and links the APIs; it never renames or moves it.',
+        'Templates for Excel (CSV) and JSON are in the import dialog.',
+      ],
+      guide: '§ 8 Map capabilities (Import capabilities)',
+    },
     fields: {
       title: 'Field inventory',
       summary: 'Reusable plain fields (ids, amounts, currencies, e-mails…) with their constraints and error codes, ready to copy into objects and bodies.',
@@ -315,6 +338,12 @@ export const BASE_HELP: HelpBundle = {
     'filter by category': 'Show only the codes of one category.',
 
     // Capabilities
+    'capability file': 'An Excel workbook (.xlsx), CSV/TSV or JSON file of capabilities. It is read into a draft you review before anything changes.',
+    'import under': 'Where the import goes: at the top of the map (its top capabilities become L1), or below an existing capability.',
+    'place in the import': 'The imported capability this one sits below, or the top of the import.',
+    'apis to link': 'Endpoint names linked to this capability when the import is applied. Names that are not in the project are ignored.',
+    'show': 'Show all imported capabilities, or only those that need a look: possible duplicates, overlaps, blocking problems, new or merging ones.',
+    'find an imported capability': 'Filter the import by name or code.',
     'parent capability': 'Where this capability sits. None makes it an L1 capability; under an Ln capability it becomes L(n+1). There are 8 levels.',
     'code (optional)': 'An id from your capability model, e.g. PAY.02.03. Must be unique in the project.',
 
@@ -332,6 +361,10 @@ export const BASE_HELP: HelpBundle = {
     [/^parameter \d+ name$/, 'The parameter name. Path parameters must match a {name} in the path.'],
     [/^parameter \d+ type$/, 'The type of the parameter value.'],
     [/^response \d+ status$/, 'The HTTP status code of this response, e.g. 200, 201, 400 or 404.'],
+    [/^imported name \d+$/, 'The name the capability gets. Press Enter or leave the field to save.'],
+    [/^imported code \d+$/, 'An id from your capability model, e.g. PAY.02.03. It must not clash with a code already in the map when the capability is created.'],
+    [/^resolution \d+$/, 'What applying does: create it as a new capability, merge it into an existing one (no second capability is made), or skip it with everything below.'],
+    [/^merge target \d+$/, 'The existing capability this one merges into. Its children go below that capability; a missing code or description is filled in.'],
     [/^l\d name$/, 'What this level is called in your capability model, e.g. Domain, Capability or Process.'],
     [/^(min|max) (length|items)$/, 'A length limit: characters for text, items for a list.'],
   ],

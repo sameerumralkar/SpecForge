@@ -346,3 +346,68 @@ export interface CapabilityApi {
   direct: boolean
   via: { capabilityId: string; name: string; level: number }[]
 }
+
+// ---------------------------------------------------------------- capability imports
+
+export type ImportResolution = 'CREATE' | 'MERGE' | 'SKIP'
+export type FindingSeverity = 'ERROR' | 'DUPLICATE' | 'OVERLAP' | 'WARNING' | 'INFO'
+export type FindingType = 'MATCH' | 'SAME_CODE' | 'SIMILAR_NAME' | 'CONTAINED_NAME' | 'SIMILAR_DESCRIPTION' | 'API_ALREADY_LINKED'
+  | 'DUPLICATE_IN_FILE' | 'TOO_DEEP' | 'UNKNOWN_API' | 'MERGE_TARGET_MISSING'
+
+/** One capability of an import draft, as stored. */
+export interface ImportNode {
+  key: string
+  parentKey: string | null
+  name: string
+  code: string | null
+  description: string | null
+  apis: string[]
+  resolution: ImportResolution
+  mergeTargetId: string | null
+  sourceRow: number | null
+}
+
+export interface ImportFinding {
+  type: FindingType
+  severity: FindingSeverity
+  message: string
+  existingId: string | null
+  existingPath: string | null
+  existingLevel: number | null
+  otherKey: string | null
+  score: number | null
+}
+
+export interface ImportNodeView extends ImportNode {
+  level: number
+  path: string[]
+  mergeTargetPath: string | null
+  findings: ImportFinding[]
+}
+
+export interface CapabilityImport {
+  id: string
+  projectId: string
+  fileName: string
+  format: string
+  sheet: string | null
+  status: 'DRAFT' | 'APPLIED' | 'DISCARDED'
+  targetParentId: string | null
+  targetParentPath: string | null
+  warnings: string[]
+  nodes: ImportNodeView[]
+  summary: { total: number; create: number; merge: number; skip: number; matches: number; duplicates: number; overlaps: number; errors: number }
+  result: { created: number; merged: number; skipped: number; apisLinked: number } | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CapabilityImportItem {
+  id: string
+  fileName: string
+  format: string
+  status: CapabilityImport['status']
+  total: number
+  createdAt: string
+  updatedAt: string
+}

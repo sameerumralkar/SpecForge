@@ -1,7 +1,7 @@
 import type {
   Endpoint, EndpointRequest, Meta, Payload, PayloadRequest, PayloadUsage, Project, ProjectRequest,
   CodeView, DiagramsView, ErrorCode, Field, FieldDefinition, ErrorCodeRequest, ErrorLink, GenerationDiff, ImportResult, Rule, RuleChain, RuleRequest, Snapshot, SnapshotKind, SpecsView,
-  Capability, CapabilityApi, CapabilityRequest,
+  Capability, CapabilityApi, CapabilityRequest, CapabilityImport, CapabilityImportItem, ImportNode,
 } from './types'
 
 export interface FieldError {
@@ -82,6 +82,14 @@ export const api = {
   capabilityApis: (projectId: string, id: string) => request<CapabilityApi[]>('GET', `${p(projectId)}/capabilities/${id}/apis`),
   setCapabilityApis: (projectId: string, id: string, ids: string[]) =>
     request<Capability>('PUT', `${p(projectId)}/capabilities/${id}/apis`, { ids }),
+  capabilityImports: (projectId: string) => request<CapabilityImportItem[]>('GET', `${p(projectId)}/capability-imports`),
+  uploadCapabilityImport: (projectId: string, fileName: string, content: string) =>
+    request<CapabilityImport>('POST', `${p(projectId)}/capability-imports`, { fileName, content }),
+  capabilityImport: (projectId: string, id: string) => request<CapabilityImport>('GET', `${p(projectId)}/capability-imports/${id}`),
+  updateCapabilityImport: (projectId: string, id: string, targetParentId: string | null, nodes: ImportNode[]) =>
+    request<CapabilityImport>('PUT', `${p(projectId)}/capability-imports/${id}`, { targetParentId, nodes }),
+  applyCapabilityImport: (projectId: string, id: string) => request<CapabilityImport>('POST', `${p(projectId)}/capability-imports/${id}/apply`),
+  discardCapabilityImport: (projectId: string, id: string) => request<void>('DELETE', `${p(projectId)}/capability-imports/${id}`),
   setEndpointCapabilities: (projectId: string, endpointId: string, ids: string[]) =>
     request<Capability[]>('PUT', `${p(projectId)}/endpoints/${endpointId}/capabilities`, { ids }),
   fieldDefinitions: (projectId: string) => request<FieldDefinition[]>('GET', `${p(projectId)}/field-definitions`),

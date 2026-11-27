@@ -7,6 +7,8 @@ code and architecture diagrams.
 
 - a functional capability model (L1 to L8) with the APIs linked to each capability, and the API inventory at
   every level;
+- capability import from Excel (.xlsx), CSV/TSV and JSON into a saved draft, compared with the existing map
+  (matches, possible duplicates, overlaps), editable, then applied (create, merge or skip per capability);
 - context help on every screen (a ? beside each title) and field tips on hover;
 - the editor, with a field inventory of reusable fields you drag into objects, and an object inventory of reusable
   building blocks you drag into requests and responses;
@@ -29,8 +31,8 @@ cd frontend && npm install && npm run dev  # UI on http://localhost:5173 (calls 
 Tests:
 
 ```bash
-cd backend && mvn test        # 148 tests; see the notes below
-cd frontend && npm test       # 68 component and unit tests (Vitest + Testing Library)
+cd backend && mvn test        # 153 tests; see the notes below
+cd frontend && npm test       # 73 component and unit tests (Vitest + Testing Library)
 ```
 
 - The PostgreSQL test needs Docker, and is skipped without it.
@@ -422,6 +424,7 @@ All under `/api`. Errors are RFC 9457 problem documents. A `400` lists every pro
 | `GET/POST …/{projectId}/capabilities`, `GET/PUT/DELETE …/capabilities/{id}` | the capability tree (in tree order); create with `{name, code?, description?, parentId?, position?}`; a change of `parentId` moves the sub-tree; delete removes the sub-tree |
 | `GET/PUT …/capabilities/{id}/apis` | the API inventory at this capability (its own and everything below, with `direct` and `via`); `PUT {ids}` replaces its own links |
 | `GET/PUT …/endpoints/{id}/capabilities` | the capabilities an API is linked to; `PUT {ids}` replaces them |
+| `GET/POST …/{projectId}/capability-imports`, `GET/PUT/DELETE …/capability-imports/{id}`, `POST …/{id}/apply` | capability imports: upload `{fileName, content (base64)}` (Excel .xlsx, CSV/TSV, JSON) into a draft; the view compares each node with the map (`findings`: MATCH, SAME_CODE, SIMILAR_NAME, CONTAINED_NAME, SIMILAR_DESCRIPTION, API_ALREADY_LINKED, DUPLICATE_IN_FILE, TOO_DEEP, UNKNOWN_API); `PUT {targetParentId, nodes}` saves edits (each node's `resolution`: CREATE, MERGE with `mergeTargetId`, or SKIP); apply is all or nothing |
 | `GET/PUT …/{projectId}/capability-levels` | the names of L1–L8 (`{levels: [8 names]}`, or `[]` for the defaults) |
 | `GET …/payloads?role=OBJECT` | the object inventory (or `STRUCTURE` for the rest) |
 | `GET/POST …/{projectId}/field-definitions`, `GET/PUT/DELETE …/field-definitions/{id}` | the field inventory; the body is a field (as in a payload), the answer `{ id, field, usedIn }` |

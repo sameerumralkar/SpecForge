@@ -31,6 +31,10 @@ export const useCapabilities = (projectId: string | undefined) =>
   useQuery({ queryKey: keys.capabilities(projectId ?? ''), queryFn: () => api.capabilities(projectId!), enabled: !!projectId })
 export const useCapabilityLevels = (projectId: string | undefined) =>
   useQuery({ queryKey: [...keys.capabilities(projectId ?? ''), 'levels'], queryFn: () => api.capabilityLevels(projectId!), enabled: !!projectId })
+export const useCapabilityImports = (projectId: string | undefined) =>
+  useQuery({ queryKey: [...keys.capabilities(projectId ?? ''), 'imports'], queryFn: () => api.capabilityImports(projectId!), enabled: !!projectId })
+export const useCapabilityImport = (projectId: string, id: string) =>
+  useQuery({ queryKey: [...keys.capabilities(projectId), 'imports', id], queryFn: () => api.capabilityImport(projectId, id) })
 export const useCapabilityApis = (projectId: string, id: string | null) =>
   useQuery({ queryKey: [...keys.capabilities(projectId), id, 'apis'], queryFn: () => api.capabilityApis(projectId, id!), enabled: !!id })
 export const useFieldDefinitions = (projectId: string | undefined) =>

@@ -99,7 +99,7 @@ export function Sidebar({ projectId }: { projectId: string }) {
         {MENU.map((m) => {
           const to = m.path ? `${base}/${m.path}` : base
           return (
-            <ListItemButton key={m.label} selected={pathname === to} onClick={() => navigate(to)} sx={{ py: 0.75 }}>
+            <ListItemButton key={m.label} selected={pathname === to || (m.path === 'capabilities' && pathname.startsWith(to + '/'))} onClick={() => navigate(to)} sx={{ py: 0.75 }}>
               <ListItemIcon sx={{ minWidth: 34 }}>{m.icon}</ListItemIcon>
               <ListItemText primary={m.label} slotProps={{ primary: { sx: { fontWeight: 500 } } }} />
             </ListItemButton>
