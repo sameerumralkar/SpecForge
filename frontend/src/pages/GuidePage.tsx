@@ -5,6 +5,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import SearchIcon from '@mui/icons-material/Search'
 import { Marked, type Tokens } from 'marked'
 import { GUIDES, guide as findGuide, slug } from '../lib/guides'
+import { renderMermaid } from '../lib/mermaid'
 
 interface Section {
   id: string
@@ -13,6 +14,8 @@ interface Section {
   text: string
 }
 
+const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
 /** Markdown to HTML, with GitHub-style ids on headings so links between sections work. */
 function render(markdown: string): string {
   const md = new Marked({ gfm: true })
@@ -20,6 +23,11 @@ function render(markdown: string): string {
     renderer: {
       heading(this: { parser: { parseInline: (t: Tokens.Heading['tokens']) => string } }, token: Tokens.Heading) {
         return `<h${token.depth} id="${slug(token.text)}">${this.parser.parseInline(token.tokens)}</h${token.depth}>\n`
+      },
+      // Mermaid blocks become diagrams once the page is shown; until then (or if one can't be drawn) their source shows.
+      code(token: Tokens.Code) {
+        if (token.lang !== 'mermaid') return false
+        return `<div class="mermaid-diagram" data-source="${encodeURIComponent(token.text)}"><pre><code>${escapeHtml(token.text)}</code></pre></div>\n`
       },
     },
   })
@@ -66,6 +74,22 @@ export function GuidePage() {
     const el = body.current?.querySelector(`[id="${id.replace(/"/g, '')}"]`)
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
+
+  // Draw the Mermaid diagrams.
+  useEffect(() => {
+    if (!html || !body.current) return
+    let cancelled = false
+    body.current.querySelectorAll<HTMLElement>('.mermaid-diagram[data-source]').forEach((el) => {
+      renderMermaid(decodeURIComponent(el.dataset.source!))
+        .then((svg) => { if (!cancelled) { el.innerHTML = svg; el.dataset.rendered = 'true' } })
+        .catch((e: unknown) => {
+          if (cancelled) return
+          el.dataset.rendered = 'error'
+          el.insertAdjacentHTML('afterbegin', `<p class="mermaid-error">This diagram could not be drawn: ${escapeHtml(String(e instanceof Error ? e.message : e))}</p>`)
+        })
+    })
+    return () => { cancelled = true }
+  }, [html])
 
   // Open at #anchor (links from another guide).
   const { hash } = useLocation()
@@ -148,6 +172,9 @@ export function GuidePage() {
                 '& th': { bgcolor: 'grey.50', fontWeight: 600 },
                 '& blockquote': { borderLeft: 4, borderColor: 'primary.light', m: 0, pl: 2, color: 'text.secondary' },
                 '& li': { mb: 0.5 },
+                '& .mermaid-diagram': { my: 2, p: 2, border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'auto', bgcolor: 'background.paper',
+                  '& svg': { maxWidth: '100%', height: 'auto', display: 'block', mx: 'auto' } },
+                '& .mermaid-error': { color: 'error.main', fontSize: 13 },
               }} dangerouslySetInnerHTML={{ __html: html }} />
             </Card>
           </Box>

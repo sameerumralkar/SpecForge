@@ -14,6 +14,10 @@ export const GUIDES: Guide[] = [
     id: 'specforge', title: 'SpecForge user guide', file: 'USER_GUIDE.md', repoUrl: 'https://github.com/sameerumralkar/SpecForge',
     load: () => import('../../../../docs/USER_GUIDE.md?raw').then((m) => m.default),
   },
+  {
+    id: 'diagrams', title: 'Diagrams', file: 'DIAGRAMS.md', repoUrl: 'https://github.com/sameerumralkar/SpecForge',
+    load: () => import('../../../../docs/DIAGRAMS.md?raw').then((m) => m.default),
+  },
 ]
 
 export const guide = (id: string | undefined) => GUIDES.find((g) => g.id === id) ?? GUIDES[0]
