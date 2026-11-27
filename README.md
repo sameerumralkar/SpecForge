@@ -9,7 +9,8 @@ code and architecture diagrams.
   every level;
 - capability import from Excel (.xlsx), CSV/TSV and JSON into a saved draft, compared with the existing map
   (matches, possible duplicates, overlaps), editable, then applied (create, merge or skip per capability);
-- context help on every screen (a ? beside each title) and field tips on hover;
+- context help on every screen (a ? beside each title), field tips on hover, and the user guide inside the app
+  (**User guide** in the top bar; help panels link to its sections);
 - the editor, with a field inventory of reusable fields you drag into objects, and an object inventory of reusable
   building blocks you drag into requests and responses;
 - generation of specs (OpenAPI 3.1 / AsyncAPI 3.0, validated), Java code (implementation classes and Camel

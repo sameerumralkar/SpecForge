@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { HomePage } from './pages/HomePage'
+import { GuidePage } from './pages/GuidePage'
 import { ProjectLayout } from './pages/ProjectLayout'
 import { ProjectPage } from './pages/ProjectPage'
 import { EndpointPage } from './pages/EndpointPage'
@@ -18,6 +19,7 @@ export const routes = [
     element: <AppShell />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: 'guide/:guideId?', element: <GuidePage /> },
       {
         path: 'projects/:projectId',
         element: <ProjectLayout />,

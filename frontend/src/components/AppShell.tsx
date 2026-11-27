@@ -6,6 +6,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import BoltIcon from '@mui/icons-material/Bolt'
 import VerticalSplitIcon from '@mui/icons-material/VerticalSplit'
 import TipsAndUpdatesOutlinedIcon from '@mui/icons-material/TipsAndUpdatesOutlined'
+import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
 import { FieldHelpLayer } from './help/FieldHelpLayer'
 import { setFieldHelpOn, useFieldHelpOn } from './help/fieldHelpStore'
 import { useQueryClient } from '@tanstack/react-query'
@@ -118,6 +119,11 @@ export function AppShell() {
               </Menu>
             </>
           )}
+          <Tooltip title="The user guide, in a new tab">
+            <Button color="inherit" startIcon={<MenuBookOutlinedIcon />} href="/guide" target="_blank" rel="noreferrer" sx={{ textTransform: 'none' }}>
+              User guide
+            </Button>
+          </Tooltip>
           <FieldTipsToggle />
           <Button color="inherit" startIcon={<AddIcon />} endIcon={<ArrowDropDownIcon />} onClick={(e) => setMenu(e.currentTarget)}>
             New project

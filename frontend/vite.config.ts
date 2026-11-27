@@ -39,6 +39,8 @@ export default defineConfig({
     port: 5173,
     // The Spring Boot backend; start it with mvn spring-boot:run in ../backend.
     proxy: { '/api': 'http://localhost:8080' },
+    // The user guides are bundled from ../docs.
+    fs: { allow: ['..'] },
   },
   build: {
     chunkSizeWarningLimit: 4000, // Monaco is large and loaded on demand

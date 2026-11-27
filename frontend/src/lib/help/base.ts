@@ -343,6 +343,7 @@ export const BASE_HELP: HelpBundle = {
     'place in the import': 'The imported capability this one sits below, or the top of the import.',
     'apis to link': 'Endpoint names linked to this capability when the import is applied. Names that are not in the project are ignored.',
     'show': 'Show all imported capabilities, or only those that need a look: possible duplicates, overlaps, blocking problems, new or merging ones.',
+    'find in the guide': 'Show only the sections of the guide that mention these words.',
     'find an imported capability': 'Filter the import by name or code.',
     'parent capability': 'Where this capability sits. None makes it an L1 capability; under an Ln capability it becomes L(n+1). There are 8 levels.',
     'code (optional)': 'An id from your capability model, e.g. PAY.02.03. Must be unique in the project.',

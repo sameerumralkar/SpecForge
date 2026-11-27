@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Box, Divider, Drawer, IconButton, Stack, Tooltip, Typography } from '@mui/material'
+import { Box, Divider, Drawer, IconButton, Link, Stack, Tooltip, Typography } from '@mui/material'
+import { guideLinks } from '../../lib/guides'
 import CloseIcon from '@mui/icons-material/Close'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined'
 import { screenHelp } from '../../lib/help'
@@ -49,7 +50,10 @@ export function ScreenHelp({ screen }: { screen: string }) {
             sx={{ border: 0, p: 0, bgcolor: 'transparent', color: 'primary.main', cursor: 'pointer', font: 'inherit', textDecoration: 'underline' }}>
             {fieldHelpOn ? 'Turn field tips off' : 'Turn field tips on'}
           </Box>
-          {help.guide && <><br />In the user guide: {help.guide}.</>}
+          {help.guide && <><br />In the user guide:{' '}
+            {guideLinks(help.guide).map((l, i) => (
+              <span key={l.href + i}>{i > 0 && ', '}<Link href={l.href} target="_blank" rel="noreferrer">{l.label}</Link></span>
+            ))}.</>}
         </Typography>
       </Drawer>
     </>

@@ -74,6 +74,8 @@ survive restarts. To use PostgreSQL instead, run `docker compose up -d` and star
 - **The ? next to each screen's title:**
   - hover over it for a one-line description of the screen;
   - click it for a panel explaining what the screen is, what you can do there, and tips.
+- **User guide:** the **User guide** button in the top bar opens this guide inside the app, in a new tab,
+  with contents and search. The guide references in each help panel are links that open it at that section.
 - **Field tips:** hover over any field, or tab into it, to see what it is for. For example, hovering over
   **Pattern (regex)** explains that the whole value must match the expression. The **Field tips** button in
   the top bar turns them off and on, and your choice is remembered in this browser.
