@@ -415,7 +415,8 @@ function CapabilityForm({ projectId, editing, parentId, all, onClose, onSaved }:
         <ErrorSummary error={error} />
         <Stack spacing={2} sx={{ pt: 1 }}>
           <TextField select label="Parent capability" value={draft.parentId ?? ''} onChange={(e) => setDraft({ ...draft, parentId: e.target.value || null })}
-            error={!!err('parentId')} helperText={err('parentId') ?? `It will be an L${level} capability`}>
+            error={!!err('parentId')} helperText={err('parentId') ?? `It will be an L${level} capability`}
+            slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}>
             <MenuItem value="">None: an L1 capability</MenuItem>
             {parents.map((c) => <MenuItem key={c.id} value={c.id} sx={{ pl: 2 + (c.level - 1) * 2 }}>L{c.level} · {c.name}</MenuItem>)}
           </TextField>
