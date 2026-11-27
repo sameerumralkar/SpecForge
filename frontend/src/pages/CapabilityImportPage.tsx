@@ -198,13 +198,13 @@ export function CapabilityImportPage() {
 
       <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 3, alignItems: 'start' }}>
         <Card variant="outlined">
-          <Table size="small" aria-label="Imported capabilities" sx={{ '& td': { verticalAlign: 'top' } }}>
+          <Table size="small" aria-label="Imported capabilities" sx={{ tableLayout: 'fixed', '& td': { verticalAlign: 'top' } }}>
             <TableHead>
               <TableRow>
-                <TableCell>Imported capability</TableCell>
-                <TableCell sx={{ width: 130 }}>Code</TableCell>
-                <TableCell sx={{ width: '32%' }}>Compared with the map</TableCell>
-                <TableCell sx={{ width: 250 }}>What applying does</TableCell>
+                <TableCell sx={{ width: '28%' }}>Imported capability</TableCell>
+                <TableCell sx={{ width: 140 }}>Code</TableCell>
+                <TableCell>Compared with the map</TableCell>
+                <TableCell sx={{ width: 230 }}>What applying does</TableCell>
                 <TableCell sx={{ width: 104 }} />
               </TableRow>
             </TableHead>
@@ -217,14 +217,14 @@ export function CapabilityImportPage() {
                   <TableRow key={n.key} hover selected={n.key === selected} onClick={() => setSelected(n.key)} sx={{ opacity: off ? 0.45 : 1, cursor: 'pointer' }}
                     aria-label={`Imported ${n.name}`}>
                     <TableCell>
-                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', pl: depth(n) * 2.5 }}>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', pl: depth(n) * 1.5 }}>
                         <LevelChip level={n.level} />
                         {editable
                           ? <InlineText value={n.name} label={`Imported name ${i + 1}`} onCommit={(v) => v.trim() && patch(n.key, { name: v.trim() })}
                               error={errorText(error, `nodes[${i}].name`)} />
                           : <Typography variant="body2">{n.name}</Typography>}
                       </Stack>
-                      <Typography variant="caption" color="text.secondary" sx={{ pl: depth(n) * 2.5, display: 'block', mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ pl: depth(n) * 1.5, display: 'block', mt: 0.5 }}>
                         {n.sourceRow != null && `Row ${n.sourceRow}`}
                         {n.apis.length > 0 && ` · APIs: ${n.apis.join(', ')}`}
                         {n.description && ` · ${n.description.length > 80 ? n.description.slice(0, 77) + '…' : n.description}`}
@@ -237,7 +237,9 @@ export function CapabilityImportPage() {
                     </TableCell>
                     <TableCell>
                       <Stack spacing={0.5}>
-                        {n.findings.length === 0 && <Typography variant="body2" color="text.secondary">New: nothing like it in the map</Typography>}
+                        {n.findings.length === 0 && (n.resolution === 'MERGE'
+                          ? <Typography variant="body2" color="success.main">Merges into {n.mergeTargetPath}</Typography>
+                          : <Typography variant="body2" color="text.secondary">New: nothing like it in the map</Typography>)}
                         {n.findings.map((f, j) => <FindingRow key={j} finding={f} editable={editable && !off}
                           onMerge={f.existingId ? () => resolve(n, 'MERGE', f.existingId) : undefined} />)}
                       </Stack>
@@ -253,7 +255,12 @@ export function CapabilityImportPage() {
                         </TextField>
                         {n.resolution === 'MERGE' && (
                           <Autocomplete size="small" options={caps} value={caps.find((c) => c.id === n.mergeTargetId) ?? null} disabled={!editable}
-                            getOptionLabel={(c) => `L${c.level} ${c.path.join(' › ')}`} isOptionEqualToValue={(a, b) => a.id === b.id}
+                            getOptionLabel={(c) => `L${c.level} ${c.name}`} isOptionEqualToValue={(a, b) => a.id === b.id}
+                            renderOption={(props, c) => {
+                              const { key, ...rest } = props as typeof props & { key: string }
+                              return <li key={key} {...rest}><Stack><Typography variant="body2">L{c.level} {c.name}</Typography>
+                                <Typography variant="caption" color="text.secondary">{c.path.join(' › ')}</Typography></Stack></li>
+                            }}
                             onChange={(_, c) => c && patch(n.key, { resolution: 'MERGE', mergeTargetId: c.id })}
                             renderInput={(params) => <TextField {...params} label={`Merge target ${i + 1}`} placeholder="Merge into…"
                               error={!!errorText(error, `nodes[${i}].mergeTargetId`)} />} />
@@ -331,16 +338,19 @@ const order = (f: ImportFinding) => ['INFO', 'DUPLICATE', 'ERROR', 'OVERLAP', 'W
 function FindingRow({ finding: f, editable, onMerge }: { finding: ImportFinding; editable: boolean; onMerge?: () => void }) {
   const sev = SEVERITY[f.severity]
   return (
-    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'flex-start' }}>
-      <Chip size="small" color={sev.color} variant={f.severity === 'OVERLAP' || f.severity === 'WARNING' ? 'outlined' : 'filled'} label={sev.label}
-        sx={{ height: 20, fontSize: 11, flexShrink: 0 }} />
-      <Typography variant="caption" sx={{ flex: 1, lineHeight: 1.6 }}>{f.message}</Typography>
-      {editable && onMerge && f.type !== 'API_ALREADY_LINKED' && (
-        <Tooltip describeChild title={`Merge into ${f.existingPath}: no second capability is created`}>
-          <Button size="small" sx={{ minWidth: 0, py: 0, fontSize: 11 }} onClick={(e) => { e.stopPropagation(); onMerge() }}>Merge</Button>
-        </Tooltip>
-      )}
-    </Stack>
+    <Box>
+      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+        <Chip size="small" color={sev.color} variant={f.severity === 'OVERLAP' || f.severity === 'WARNING' ? 'outlined' : 'filled'} label={sev.label}
+          sx={{ height: 20, fontSize: 11 }} />
+        {editable && onMerge && f.type !== 'API_ALREADY_LINKED' && (
+          <Tooltip describeChild title={`Merge into ${f.existingPath}: no second capability is created`}>
+            <Button size="small" startIcon={<CallMergeIcon sx={{ fontSize: '14px !important' }} />} sx={{ minWidth: 0, py: 0, fontSize: 11 }}
+              onClick={(e) => { e.stopPropagation(); onMerge() }}>Merge</Button>
+          </Tooltip>
+        )}
+      </Stack>
+      <Typography variant="caption" sx={{ display: 'block', lineHeight: 1.5, mt: 0.25 }}>{f.message}</Typography>
+    </Box>
   )
 }
 

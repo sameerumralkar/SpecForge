@@ -324,6 +324,17 @@ public class CapabilityImportService {
         }
         boolean light = (long) nodes.size() * existing.size() > 2_000_000; // very large maps: words only, no spelling distance
 
+        // Where each node lands in the map: the existing capability it is (merge target or exact match), else the
+        // nearest such capability above it. Names along that line are expected to repeat ("Payments" above
+        // "Payment initiation"), so they are not compared.
+        Map<UUID, UUID> parentOf = new HashMap<>();
+        existing.forEach(c -> { if (c.parentId() != null) parentOf.put(c.id(), c.parentId()); });
+        Map<String, UUID> itself = new HashMap<>();
+        for (ImportNode n : nodes) {
+            CapabilityView m = n.resolution() == ImportNode.Resolution.MERGE ? byId.get(n.mergeTargetId()) : byPath.get(pathKey(path.get(n.key())));
+            if (m != null) itself.put(n.key(), m.id());
+        }
+
         List<NodeView> views = new ArrayList<>();
         for (ImportNode n : nodes) {
             List<Finding> findings = new ArrayList<>();
@@ -331,6 +342,19 @@ public class CapabilityImportService {
             CapabilityView exact = byPath.get(pathKey(p));
             CapabilityView mergeTarget = n.resolution() == ImportNode.Resolution.MERGE ? byId.get(n.mergeTargetId()) : null;
             Set<UUID> related = new HashSet<>(); // existing capabilities this node already corresponds to
+            Set<UUID> lineage = new HashSet<>(); // capabilities above or below where it lands: not compared by name
+            UUID anchor = itself.get(n.key());
+            for (String k = n.parentKey(); anchor == null && k != null; k = byKey.get(k).parentKey()) anchor = itself.get(k);
+            if (anchor == null && target != null) anchor = target.id();
+            for (UUID a = anchor; a != null; a = parentOf.get(a)) lineage.add(a);
+            UUID own = itself.get(n.key());
+            if (own != null) {
+                for (CapabilityView c : existing) {
+                    for (UUID a = c.id(); a != null; a = parentOf.get(a)) {
+                        if (a.equals(own)) { lineage.add(c.id()); break; }
+                    }
+                }
+            }
             if (mergeTarget != null) related.add(mergeTarget.id());
             if (n.resolution() == ImportNode.Resolution.MERGE && mergeTarget == null) {
                 findings.add(new Finding(FindingType.MERGE_TARGET_MISSING, Severity.ERROR, "The capability to merge into no longer exists; choose another, or create this one",
@@ -359,14 +383,15 @@ public class CapabilityImportService {
             }
             List<Finding> similar = new ArrayList<>();
             for (CapabilityView c : existing) {
-                if (related.contains(c.id())) continue;
+                if (related.contains(c.id()) || lineage.contains(c.id())) continue;
                 double score = light ? Similarity.jaccard(Similarity.words(n.name()), Similarity.words(c.name())) : Similarity.names(n.name(), c.name());
                 int pct = (int) Math.round(score * 100);
                 String where = "L" + c.level() + " " + String.join(" › ", c.path());
                 if (score >= 0.85) {
                     similar.add(new Finding(FindingType.SIMILAR_NAME, Severity.DUPLICATE, "Possible duplicate of " + where + " (" + pct + "% alike)",
                             c.id(), String.join(" › ", c.path()), c.level(), null, pct));
-                } else if (Similarity.contains(n.name(), c.name()) || score >= 0.6) {
+                } else if (Similarity.contains(n.name(), c.name())
+                        || (score >= 0.7 && Similarity.jaccard(Similarity.words(n.name()), Similarity.words(c.name())) > 0)) {
                     similar.add(new Finding(FindingType.CONTAINED_NAME, Severity.OVERLAP, "Overlaps with " + where
                             + (Similarity.contains(n.name(), c.name()) ? " (one name contains the other)" : " (" + pct + "% alike)"),
                             c.id(), String.join(" › ", c.path()), c.level(), null, pct));
