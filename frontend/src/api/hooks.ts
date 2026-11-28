@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
-import type { SnapshotKind } from './types'
+import type { ReportId, SnapshotKind } from './types'
 
 export const keys = {
   meta: ['meta'] as const,
@@ -18,6 +18,14 @@ export const keys = {
   snapshots: (projectId: string, kind: string) => ['projects', projectId, 'snapshots', kind] as const,
   diff: (projectId: string, snapshotId: string) => ['projects', projectId, 'diff', snapshotId] as const,
 }
+
+/** A report; refetched whenever it is opened, so it shows the saved projects as they are now. */
+export const useReport = <R extends ReportId>(report: R, projectId?: string) =>
+  useQuery({ queryKey: ['reports', report, projectId ?? 'all'], queryFn: () => api.report(report, projectId), staleTime: 0 })
+
+/** The capability map of one project, for walking it down (capability → fields) and up (field → capability). */
+export const useCapabilityMap = (projectId: string | undefined) =>
+  useQuery({ queryKey: ['reports', 'map', projectId ?? ''], queryFn: () => api.capabilityMap(projectId!), enabled: !!projectId, staleTime: 0 })
 
 export const useMeta = () => useQuery({ queryKey: keys.meta, queryFn: api.meta, staleTime: Infinity })
 export const useProjects = () => useQuery({ queryKey: keys.projects, queryFn: api.projects })

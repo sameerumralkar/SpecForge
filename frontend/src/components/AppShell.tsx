@@ -7,6 +7,7 @@ import BoltIcon from '@mui/icons-material/Bolt'
 import VerticalSplitIcon from '@mui/icons-material/VerticalSplit'
 import TipsAndUpdatesOutlinedIcon from '@mui/icons-material/TipsAndUpdatesOutlined'
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined'
 import { FieldHelpLayer } from './help/FieldHelpLayer'
 import { setFieldHelpOn, useFieldHelpOn } from './help/fieldHelpStore'
 import { useQueryClient } from '@tanstack/react-query'
@@ -119,6 +120,11 @@ export function AppShell() {
               </Menu>
             </>
           )}
+          <Tooltip title="Reports across your projects: projects, endpoints, objects, and fields with their linked objects">
+            <Button color="inherit" startIcon={<AssessmentOutlinedIcon />} onClick={() => navigate('/reports')} sx={{ textTransform: 'none' }}>
+              Reports
+            </Button>
+          </Tooltip>
           <Tooltip title="The user guide, in a new tab">
             <Button color="inherit" startIcon={<MenuBookOutlinedIcon />} href="/guide" target="_blank" rel="noreferrer" sx={{ textTransform: 'none' }}>
               User guide

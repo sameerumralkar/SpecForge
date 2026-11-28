@@ -12,6 +12,7 @@ import { ErrorCodesPage } from './pages/ErrorCodesPage'
 import { FieldInventoryPage } from './pages/FieldInventoryPage'
 import { CapabilitiesPage } from './pages/CapabilitiesPage'
 import { CapabilityImportPage } from './pages/CapabilityImportPage'
+import { ReportsPage } from './pages/ReportsPage'
 
 export const routes = [
   {
@@ -20,6 +21,7 @@ export const routes = [
     children: [
       { index: true, element: <HomePage /> },
       { path: 'guide/:guideId?', element: <GuidePage /> },
+      { path: 'reports/:reportId?', element: <ReportsPage /> },
       {
         path: 'projects/:projectId',
         element: <ProjectLayout />,

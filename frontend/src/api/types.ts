@@ -411,3 +411,68 @@ export interface CapabilityImportItem {
   createdAt: string
   updatedAt: string
 }
+
+// ---- Reports ----
+
+export type ReportId = 'projects' | 'endpoints' | 'objects' | 'fields'
+
+export interface ProjectTotals {
+  projects: number; endpoints: number; restEndpoints: number; asyncEndpoints: number; objects: number; structures: number
+  fields: number; fieldDefinitions: number; errorCodes: number; capabilities: number; rules: number
+}
+
+export interface ProjectReportRow {
+  id: string; name: string; description: string | null; version: string; basePackage: string; defaultImplementationStyle: string
+  createdAt: string; updatedAt: string; endpoints: number; restEndpoints: number; asyncEndpoints: number; objects: number
+  structures: number; fields: number; fieldDefinitions: number; errorCodes: number; capabilities: number; rules: number
+  mappedEndpoints: number
+}
+
+export interface ProjectsReport { totals: ProjectTotals; projects: ProjectReportRow[] }
+
+export interface ProjectEndpointCount { projectId: string; projectName: string; total: number; rest: number; async: number; withRules: number; mapped: number }
+
+export interface EndpointReportRow {
+  projectId: string; projectName: string; id: string; name: string; kind: 'REST' | 'ASYNC'; method: string | null; path: string | null
+  operation: string | null; channel: string | null; protocol: string | null; summary: string | null; tags: string[]
+  implementationStyle: string; requestPayload: string | null; responses: string[]; messagePayload: string | null
+  parameters: number; rules: number; security: string[]; capabilities: string[]
+}
+
+export interface EndpointsReport { total: number; perProject: ProjectEndpointCount[]; endpoints: EndpointReportRow[] }
+
+export interface ObjectReportRow {
+  projectId: string; projectName: string; id: string; name: string; role: 'OBJECT' | 'STRUCTURE'; description: string | null
+  fields: number; requiredFields: number; objectFields: number; linkedObjects: string[]; usedBy: number; usages: string[]
+}
+
+export interface ObjectsReport { total: number; objects: number; structures: number; payloads: ObjectReportRow[] }
+
+export interface LinkedObjectCount {
+  projectId: string; projectName: string; objectId: string; objectName: string; objectRole: 'OBJECT' | 'STRUCTURE'; fields: number; heldBy: string[]
+}
+
+export interface FieldReportRow {
+  projectId: string; projectName: string; payloadId: string; payloadName: string; payloadRole: 'OBJECT' | 'STRUCTURE'; position: number
+  name: string; type: string; itemType: string | null; required: boolean; linkedObjectId: string | null; linkedObject: string | null
+  linkedObjectRole: 'OBJECT' | 'STRUCTURE' | null; constraints: string; description: string | null; inFieldInventory: boolean
+}
+
+export interface FieldsReport { total: number; linked: number; linkedObjects: number; perObject: LinkedObjectCount[]; fields: FieldReportRow[] }
+
+export interface ReportData { projects: ProjectsReport; endpoints: EndpointsReport; objects: ObjectsReport; fields: FieldsReport }
+
+// ---- The capability map ----
+
+export interface MapCapability { id: string; parentId: string | null; level: number; name: string; code: string | null; description: string | null; endpointIds: string[] }
+export interface MapUse { payloadId: string; how: string }
+export interface MapRule { id: string; position: number; name: string; type: string; typeLabel: string; condition: string | null; payloadIds: string[]; errorCodes: number }
+export interface MapEndpoint {
+  id: string; name: string; kind: 'REST' | 'ASYNC'; method: string | null; path: string | null; operation: string | null; channel: string | null
+  protocol: string | null; summary: string | null; uses: MapUse[]; rules: MapRule[]
+}
+export interface MapField { name: string; type: string; itemType: string | null; required: boolean; refPayloadId: string | null; constraints: string; description: string | null }
+export interface MapPayload { id: string; name: string; role: 'OBJECT' | 'STRUCTURE'; description: string | null; fields: MapField[] }
+export interface CapabilityMap {
+  projectId: string; projectName: string; levelNames: string[]; capabilities: MapCapability[]; endpoints: MapEndpoint[]; payloads: MapPayload[]
+}

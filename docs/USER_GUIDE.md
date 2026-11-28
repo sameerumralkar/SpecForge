@@ -24,9 +24,10 @@ This guide is task by task. For the technical reference (the model, the generate
 12. [Diagrams](#12-diagrams)
 13. [Compare with earlier output](#13-compare-with-earlier-output)
 14. [Import and export](#14-import-and-export)
-15. [Reference: expressions](#15-reference-expressions)
-16. [Reference: rule types](#16-reference-rule-types)
-17. [Tips and troubleshooting](#17-tips-and-troubleshooting)
+15. [Reports](#15-reports)
+16. [Reference: expressions](#16-reference-expressions)
+17. [Reference: rule types](#17-reference-rule-types)
+18. [Tips and troubleshooting](#18-tips-and-troubleshooting)
 
 ---
 
@@ -49,6 +50,7 @@ survive restarts. To use PostgreSQL instead, run `docker compose up -d` and star
   - the **project picker**;
   - **Preview**, which opens the generated spec, code or diagrams beside the editor;
   - **Generate**, which downloads specs, code or diagrams as a zip;
+  - **Reports**, counts and details across your projects (see [Reports](#15-reports));
   - **New project**.
 - **Left menu, at the top:** full pages for the project.
 
@@ -200,7 +202,7 @@ The project sets the default, and each endpoint can override it.
 Rules are the steps an endpoint runs, in order. Open the endpoint's **Processing rules** tab and choose
 **Add rule**.
 
-1. Pick the **type** (see [Rule types](#16-reference-rule-types)) and give the rule a **name** such as
+1. Pick the **type** (see [Rule types](#17-reference-rule-types)) and give the rule a **name** such as
    "Check the balance".
 2. Optionally set a **condition**, e.g. `amount.value > 3000`. The rule then runs only when the condition is
    true.
@@ -423,7 +425,56 @@ the file can go in Git, be reviewed in a pull request, and be imported anywhere.
 
 An import either succeeds completely or creates nothing. Each error names the part of the file it is about.
 
-## 15. Reference: expressions
+## 15. Reports
+
+**Reports** in the top bar opens four reports and a two-way capability map, one per tab. They read the saved projects as they are now and
+change nothing.
+
+| Report | Shows |
+|---|---|
+| **1. Projects** | how many projects there are, and for each: version, base package, default style, the number of endpoints (REST and async), objects, structures, fields, field-inventory entries, rules, error codes and capabilities, how many APIs are mapped to a capability, and when it was created and last changed |
+| **2. Endpoints per project** | a count per project (endpoints, REST, async, with rules, mapped to a capability), then every endpoint: method and path or channel, tags, request or message, responses, parameters, rules, implementation style, security and the capabilities it is linked to |
+| **3. Objects** | the objects in the object inventory (switch to **Structures** or **All** for the rest): their fields, required fields, the fields holding other objects, the objects they hold, and everything that uses them |
+| **4. Fields and linked objects** | first, each object that fields hold, with how many fields hold it and which (e.g. `Order.total`); then every payload field with its type, whether it is required, the object it holds (if any), its constraints and whether the field inventory has it. **Only fields with a linked object** narrows the list |
+
+### The capability map and Where used
+
+Two more tabs show one project as a map you click through, one column per click. Clicking an item opens the
+next column to its right. Clicking an earlier item, or a name in the trail above the columns, goes back. The
+arrow at the top of a column opens that item in the editor.
+
+- **5. Capability map** goes down:
+  1. the L1 capabilities, and the endpoints not mapped to any capability;
+  2. a capability opens the level below it (L2 under L1, and so on to L8) and the endpoints linked to it;
+  3. an endpoint opens its **objects** (with how it uses each: request body, response 201, message, or a
+     rule) and its **processing rules** in order;
+  4. an object opens its **fields**. A field that holds an object opens that object. A plain field opens
+     the list of objects it is used in;
+  5. a rule opens its type, its condition, its error codes and the objects it uses.
+- **6. Where used** goes up:
+  1. every field name, with the number of payloads that have it;
+  2. a field opens the **objects it is used in**;
+  3. an object opens the **endpoints that use it**, directly or through an object that holds it (e.g.
+     `request body, through Order.total`), and the **objects that hold it**;
+  4. an endpoint opens the **capabilities it is linked to**, with their path from L1;
+  5. a capability opens the one **above it**, and so on up to L1.
+
+The map shows one project at a time. With **All projects** chosen, it shows the first project; choose another
+in **Projects in the report**. **Filter this column** narrows the first column.
+
+On every report:
+
+- **Projects in the report** covers all projects, or just one.
+- The tiles at the top give the totals.
+- Click a column heading to sort by it (again to reverse, a third time to go back to the original order).
+- **Find in the table** keeps only the rows that mention what you type.
+- **CSV** downloads the rows shown, filtered and sorted, every page, for Excel.
+- Project, endpoint and payload names are links: click one to open it in the editor.
+
+Two numbers point to work left to do: **Objects not used** (report 3) and endpoints that are **not mapped** to
+a capability (report 2).
+
+## 16. Reference: expressions
 
 Conditions, branch conditions, mapping expressions and CUSTOM checks share one syntax.
 
@@ -445,7 +496,7 @@ Examples:
 A syntax error (such as `=` instead of `==`) blocks the save and shows the position. A field that doesn't
 exist shows as a warning instead.
 
-## 16. Reference: rule types
+## 17. Reference: rule types
 
 | Type | What it does | Main settings |
 |---|---|---|
@@ -458,7 +509,7 @@ exist shows as a warning instead.
 | **Split / aggregate** | Processes each item of a list, then combines the results | list field, parallel, aggregation (collect, sum, count, none) |
 | **Error handling** | Retries, falls back, or dead-letters failures of one step or the whole chain | which errors, target rule, retry (attempts, back-off), fallback (error or default response), dead-letter destination |
 
-## 17. Tips and troubleshooting
+## 18. Tips and troubleshooting
 
 **Tips**
 - **Start from the inventories.** Define the fields first, then the objects built from them, then the

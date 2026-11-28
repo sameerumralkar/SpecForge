@@ -15,6 +15,34 @@ export const BASE_HELP: HelpBundle = {
       ],
       guide: '§ 3 Create a project',
     },
+    reports: {
+      title: 'Reports',
+      summary: 'Counts and details across your projects: the projects, the endpoints of each project, the objects, and every field with the object it holds.',
+      sections: [
+        { heading: 'What this screen is', items: [
+          'Four reports, one per tab. Each reads the saved projects as they are now and changes nothing.',
+          '1. Projects: how many there are, with each one\'s settings and counts (endpoints, objects, structures, fields, rules, error codes, capabilities, and how many APIs are mapped).',
+          '2. Endpoints per project: a count per project (REST, async, with rules, mapped to a capability), then every endpoint with its route, bodies, responses, rules, security and capabilities.',
+          '3. Objects: the payloads in the object inventory (or the structures, or both) with their fields, the objects they hold, and everything that uses them.',
+          '4. Fields and linked objects: every payload field with the object it holds, if any, and a count of the fields holding each object.',
+          '5. Capability map: click down from an L1 capability, level by level, to the endpoints linked to it, then an endpoint\'s objects and processing rules, then an object\'s fields.',
+          '6. Where used: click up from a field to the objects it is in, the endpoints that use them (directly or through an object that holds them), and the capabilities above, up to L1.',
+        ] },
+        { heading: 'What you can do', items: [
+          'Projects in the report: cover every project, or just one.',
+          'Click a column heading to sort by it; click again to reverse, a third time to go back.',
+          'Find in the table: show only the rows that mention these words.',
+          'CSV: download the rows shown (filtered and sorted, every page) for Excel.',
+          'Click a project, endpoint or payload name to open it in the editor.',
+          'On the map: each click opens the next column; click an earlier column, or the trail above, to go back. The arrow at the top of a column opens that item in the editor.',
+        ] },
+      ],
+      tips: [
+        'Objects not used (report 3) and endpoints not mapped to a capability (report 2) point to work left to do.',
+        'Hover over a list ending in "+N more" to see all of it.',
+      ],
+      guide: '§ 15 Reports',
+    },
     overview: {
       title: 'Overview & settings',
       summary: 'The project as a whole: its counts, its settings (name, Java package, version, implementation style), export and delete.',
@@ -343,6 +371,12 @@ export const BASE_HELP: HelpBundle = {
     'place in the import': 'The imported capability this one sits below, or the top of the import.',
     'apis to link': 'Endpoint names linked to this capability when the import is applied. Names that are not in the project are ignored.',
     'show': 'Show all imported capabilities, or only those that need a look: possible duplicates, overlaps, blocking problems, new or merging ones.',
+    // Reports
+    'projects in the report': 'Which projects the report covers: all of them, or one.',
+    'endpoint kind': 'Show every endpoint, only REST endpoints, or only async (messaging) endpoints.',
+    'payloads to show': 'Objects: the payloads in the object inventory. Structures: requests, responses and messages. All: both.',
+    'filter the first column': 'Show only the items of the first column that mention these words: capabilities on the map, field names in Where used.',
+    'only fields with a linked object': 'On: show only fields that hold an object (an OBJECT field, or a list of objects). Off: every field.',
     'find in the guide': 'Show only the sections of the guide that mention these words.',
     'find an imported capability': 'Filter the import by name or code.',
     'parent capability': 'Where this capability sits. None makes it an L1 capability; under an Ln capability it becomes L(n+1). There are 8 levels.',
@@ -367,6 +401,7 @@ export const BASE_HELP: HelpBundle = {
     [/^resolution \d+$/, 'What applying does: create it as a new capability, merge it into an existing one (no second capability is made), or skip it with everything below.'],
     [/^merge target \d+$/, 'The existing capability this one merges into. Its children go below that capability; a missing code or description is filled in.'],
     [/^l\d name$/, 'What this level is called in your capability model, e.g. Domain, Capability or Process.'],
+    [/^find in (projects|endpoint|object|field)/, 'Show only the rows of this table that mention these words, in any column.'],
     [/^(min|max) (length|items)$/, 'A length limit: characters for text, items for a list.'],
   ],
 }

@@ -16,7 +16,10 @@ code and architecture diagrams.
 - generation of specs (OpenAPI 3.1 / AsyncAPI 3.0, validated), Java code (implementation classes and Camel
   routes) and diagrams (Mermaid and PlantUML);
 - import from OpenAPI/AsyncAPI files and project JSON, and export to project JSON;
-- comparing generated output with earlier snapshots.
+- comparing generated output with earlier snapshots;
+- reports across projects: projects, endpoints per project, objects, and fields with the objects they hold,
+  each with totals, sorting, search and CSV download; and a capability map to click down (L1 to L8, endpoints,
+  objects, rules, fields) and up (field, objects, endpoints, capabilities, to L1).
 
 **New here? Read the [user guide](docs/USER_GUIDE.md):** a task-by-task walk through the app.
 
@@ -38,8 +41,8 @@ cd frontend && npm install && npm run dev  # UI on http://localhost:5173 (calls 
 Tests:
 
 ```bash
-cd backend && mvn test        # 153 tests; see the notes below
-cd frontend && npm test       # 73 component and unit tests (Vitest + Testing Library)
+cd backend && mvn test        # 159 tests; see the notes below
+cd frontend && npm test       # 87 component and unit tests (Vitest + Testing Library)
 ```
 
 - The PostgreSQL test needs Docker, and is skipped without it.
@@ -388,6 +391,27 @@ Tests check both round trips:
 API: `GET /api/projects/{id}/export`, `POST /api/projects/import[?name=…]`,
 `POST /api/projects/import/spec` (`{documents: [...], name?, basePackage?}`).
 
+## Reports
+
+**Reports** (top bar) has four reports, each over every project or one (`?projectId=`):
+
+| Report | API | Holds |
+|---|---|---|
+| Projects | `GET /api/reports/projects` | `totals`, and per project its settings and counts (endpoints, REST/async, objects, structures, fields, field inventory, rules, error codes, capabilities, mapped APIs) |
+| Endpoints per project | `GET /api/reports/endpoints` | `perProject` counts (total, REST, async, with rules, mapped), and every endpoint with its route or channel, bodies, responses, parameters, rules, style, security and capabilities |
+| Objects | `GET /api/reports/objects` | every payload (objects first) with its field counts, the objects it holds, and its uses |
+| Fields and linked objects | `GET /api/reports/fields` | `perObject` (each object that fields hold, with the fields holding it), and every payload field with its type, the object it holds, its constraints and whether the field inventory has it |
+
+Rows are sorted by project, then name. In the app, each table sorts, filters and downloads as CSV.
+
+Two more tabs walk one project as a map, one column per click. `GET /api/reports/map?projectId=` returns
+the capabilities in tree order (each with the endpoints linked to it), the endpoints (the payloads each uses,
+and how, and its rules with the payloads they refer to) and the payloads with their fields.
+
+- **Capability map** goes down: L1 → … → L8 → endpoints → objects and processing rules → fields.
+- **Where used** goes up: field → objects → endpoints (directly, or through the objects that hold it) →
+  capabilities → up to L1.
+
 ## Comparing generations
 
 Each download of the code or spec zip saves a **snapshot** of the generated files, and **Save snapshot**
@@ -489,6 +513,7 @@ backend/src/main/java/dev/specbuilder/
   expression/    the shared expression syntax: parser and type checker
   importexport/  the project JSON format, its import/export, and the OpenAPI/AsyncAPI importer
   generation/    snapshots of generated output and diffs against them
+  reports/       the reports across projects
   generator/     ProjectSnapshot (read-only input), the Generator interface; generator/spec/ holds
                  the OpenAPI and AsyncAPI generators, the YAML/JSON writer and the validators;
                  generator/code/ builds the code model, translates expressions and renders templates;

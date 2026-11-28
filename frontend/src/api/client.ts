@@ -1,7 +1,7 @@
 import type {
   Endpoint, EndpointRequest, Meta, Payload, PayloadRequest, PayloadUsage, Project, ProjectRequest,
   CodeView, DiagramsView, ErrorCode, Field, FieldDefinition, ErrorCodeRequest, ErrorLink, GenerationDiff, ImportResult, Rule, RuleChain, RuleRequest, Snapshot, SnapshotKind, SpecsView,
-  Capability, CapabilityApi, CapabilityRequest, CapabilityImport, CapabilityImportItem, ImportNode,
+  Capability, CapabilityApi, CapabilityRequest, CapabilityImport, CapabilityImportItem, ImportNode, ReportData, ReportId, CapabilityMap,
 } from './types'
 
 export interface FieldError {
@@ -54,6 +54,12 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
 const p = (projectId: string) => `/api/projects/${projectId}`
 
 export const api = {
+  /** One project's capabilities, endpoints, rules, objects and fields, linked. */
+  capabilityMap: (projectId: string) => request<CapabilityMap>('GET', `/api/reports/map?projectId=${encodeURIComponent(projectId)}`),
+  /** A report across every project, or one project. */
+  report: <R extends ReportId>(report: R, projectId?: string) =>
+    request<ReportData[R]>('GET', `/api/reports/${report}${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ''}`),
+
   meta: () => request<Meta>('GET', '/api/meta'),
 
   projects: () => request<Project[]>('GET', '/api/projects'),
